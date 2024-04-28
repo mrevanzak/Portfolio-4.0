@@ -3,9 +3,9 @@
  * @see https://github.com/iamvishnusankar/next-sitemap#readme
  */
 module.exports = {
-  siteUrl: "https://rvnza.tech",
+  siteUrl: 'https://rvnza.tech',
   generateRobotsTxt: true,
   robotsTxtOptions: {
-    policies: [{ userAgent: "*", allow: "/" }],
+    policies: [{ userAgent: '*', allow: '/' }],
   },
 };

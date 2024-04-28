@@ -1,10 +1,10 @@
-import { Metadata } from "next";
-import { ThemeProvider } from "next-themes";
-import * as React from "react";
+import { Metadata } from 'next';
+import { ThemeProvider } from 'next-themes';
+import * as React from 'react';
 
-import "@/styles/globals.css";
+import '@/styles/globals.css';
 
-import { siteConfig } from "@/constant/config";
+import { siteConfig } from '@/constant/config';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -15,9 +15,9 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   robots: { index: true, follow: true },
   icons: {
-    icon: "/favicon/favicon.ico",
-    shortcut: "/favicon/favicon-16x16.png",
-    apple: "/favicon/apple-touch-icon.png",
+    icon: '/favicon/favicon.ico',
+    shortcut: '/favicon/favicon-16x16.png',
+    apple: '/favicon/apple-touch-icon.png',
   },
   manifest: `/favicon/site.webmanifest`,
   openGraph: {
@@ -26,18 +26,18 @@ export const metadata: Metadata = {
     description: siteConfig.description,
     siteName: siteConfig.title,
     images: [`${siteConfig.url}/images/og.jpg`],
-    type: "website",
-    locale: "en_US",
+    type: 'website',
+    locale: 'en_US',
   },
   twitter: {
-    card: "summary_large_image",
+    card: 'summary_large_image',
     title: siteConfig.title,
     description: siteConfig.description,
     images: [`${siteConfig.url}/images/og.jpg`],
   },
   authors: [
     {
-      name: "Mochamad Revanza Kurniawan",
+      name: 'Mochamad Revanza Kurniawan',
       url: siteConfig.url,
     },
   ],
@@ -50,10 +50,8 @@ export default function RootLayout({
 }) {
   return (
     <html suppressHydrationWarning>
-      <body>
-        <ThemeProvider attribute="class" enableSystem>
-          {children}
-        </ThemeProvider>
+      <body className='bg-zinc-100 dark:bg-zinc-900'>
+        <ThemeProvider attribute='class'>{children}</ThemeProvider>
       </body>
     </html>
   );
