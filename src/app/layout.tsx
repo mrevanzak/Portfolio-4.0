@@ -1,20 +1,23 @@
-import { Metadata } from 'next';
-import * as React from 'react';
+import { Metadata } from "next";
+import { ThemeProvider } from "next-themes";
+import * as React from "react";
 
-import '@/styles/globals.css';
+import "@/styles/globals.css";
 
-import { siteConfig } from '@/constant/config';
+import { siteConfig } from "@/constant/config";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
     default: siteConfig.title,
     template: `%s | ${siteConfig.title}`,
-  }, description: siteConfig.description, robots: { index: true, follow: true },
+  },
+  description: siteConfig.description,
+  robots: { index: true, follow: true },
   icons: {
-    icon: '/favicon/favicon.ico',
-    shortcut: '/favicon/favicon-16x16.png',
-    apple: '/favicon/apple-touch-icon.png',
+    icon: "/favicon/favicon.ico",
+    shortcut: "/favicon/favicon-16x16.png",
+    apple: "/favicon/apple-touch-icon.png",
   },
   manifest: `/favicon/site.webmanifest`,
   openGraph: {
@@ -23,22 +26,21 @@ export const metadata: Metadata = {
     description: siteConfig.description,
     siteName: siteConfig.title,
     images: [`${siteConfig.url}/images/og.jpg`],
-    type: 'website',
-    locale: 'en_US',
+    type: "website",
+    locale: "en_US",
   },
   twitter: {
-    card: 'summary_large_image',
+    card: "summary_large_image",
     title: siteConfig.title,
     description: siteConfig.description,
     images: [`${siteConfig.url}/images/og.jpg`],
-    // creator: '@th_clarence',
   },
-  // authors: [
-  //   {
-  //     name: 'Theodorus Clarence',
-  //     url: 'https://theodorusclarence.com',
-  //   },
-  // ],
+  authors: [
+    {
+      name: "Mochamad Revanza Kurniawan",
+      url: siteConfig.url,
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -47,8 +49,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html>
-      <body>{children}</body>
+    <html suppressHydrationWarning>
+      <body>
+        <ThemeProvider attribute="class" enableSystem>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
