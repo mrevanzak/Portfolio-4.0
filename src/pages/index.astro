@@ -9,7 +9,7 @@ const discordUserId = "192485745087348736";
 ---
 
 <BaseLayout title="Rev" description="Design, engineering, and writing by Rev.">
-  <main class="page-shell" data-astro-transition-scope="portfolio-home">
+  <main class="page-shell route-enter-shell" data-route-shell data-route-view="home" data-route-kind="home" data-astro-transition-scope="portfolio-home">
     <header class="intro-panel stagger-in" aria-labelledby="page-title">
       <a class="skip-link" href="#content">Skip to content</a>
       <div class="intro-topline">
@@ -139,6 +139,8 @@ const discordUserId = "192485745087348736";
     }
 
     updateDiscordStatus();
+    const discordStatusInterval = window.setInterval(updateDiscordStatus, 60_000);
+    document.addEventListener("astro:before-swap", () => window.clearInterval(discordStatusInterval), { once: true });
 
     const sections = document.querySelectorAll(".index-section");
 

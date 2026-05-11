@@ -26,8 +26,21 @@ const {
     <ClientRouter />
     <script is:inline>
       document.documentElement.classList.add("hover-cold");
+      const root = document.documentElement;
       let firstX = -1;
       let firstY = -1;
+
+      function syncRouteContext() {
+        const shell = document.querySelector("[data-route-shell]");
+        const routeView = shell?.getAttribute("data-route-view") ?? "home";
+        const routeKind = shell?.getAttribute("data-route-kind") ?? "home";
+
+        root.dataset.routeView = routeView;
+        root.dataset.routeKind = routeKind;
+        root.classList.remove("route-view-home", "route-view-detail", "route-kind-home", "route-kind-work", "route-kind-writing");
+        root.classList.add(`route-view-${routeView}`, `route-kind-${routeKind}`);
+      }
+
       function armHover() {
         document.documentElement.classList.remove("hover-cold");
         window.removeEventListener("pointermove", onFirstPointerMove);
@@ -43,8 +56,19 @@ const {
           armHover();
         }
       }
-      window.addEventListener("pointermove", onFirstPointerMove, { passive: true });
-      window.addEventListener("pointerdown", armHover, { passive: true });
+      if (!window.__portfolioRouteMotionBound) {
+        window.__portfolioRouteMotionBound = true;
+        window.addEventListener("pointermove", onFirstPointerMove, { passive: true });
+        window.addEventListener("pointerdown", armHover, { passive: true });
+        document.addEventListener("astro:page-load", syncRouteContext);
+        document.addEventListener("astro:after-swap", syncRouteContext);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", syncRouteContext, { once: true });
+      } else {
+        syncRouteContext();
+      }
     </script>
   </head>
   <body>

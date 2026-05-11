@@ -12,7 +12,7 @@ const blocks: DetailBlock[] = item.body?.length ? item.body : item.summary ? [{ 
 ---
 
 <BaseLayout title={`${item.title} — Rev`} description={description}>
-  <main class="detail-shell" data-astro-transition-scope={`detail-${item.kind}`}>
+  <main class="detail-shell route-enter-shell" data-route-shell data-route-view="detail" data-route-kind={item.kind} data-astro-transition-scope={`detail-${item.kind}`}>
     <article class="detail-page">
       <header class="detail-header stagger-in" style="--delay: 40ms">
         <a class="back-pill" href="/">← Back</a>
