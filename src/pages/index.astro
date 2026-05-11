@@ -5,13 +5,34 @@ import { getPortfolioContent } from "../lib/content";
 const { work, writing } = await getPortfolioContent({ includeBody: false });
 const hasWriting = writing.length > 0;
 const visibleCount = 3;
+const discordUserId = "192485745087348736";
 ---
 
 <BaseLayout title="Rev" description="Design, engineering, and writing by Rev.">
   <main class="page-shell" data-astro-transition-scope="portfolio-home">
     <header class="intro-panel stagger-in" aria-labelledby="page-title">
       <a class="skip-link" href="#content">Skip to content</a>
-      <p class="kicker">Design & engineering</p>
+      <div class="intro-topline">
+        <p class="kicker">Design & engineering</p>
+        <a
+          class="discord-status"
+          href={`https://discord.com/users/${discordUserId}`}
+          target="_blank"
+          rel="noreferrer"
+          data-discord-status
+          data-status="loading"
+          aria-label="Discord status: checking"
+        >
+          <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M19.5 5.1A17.6 17.6 0 0 0 15.1 3.8l-.2.4a12.3 12.3 0 0 1 3.3 1.7 14 14 0 0 0-9.8 0 12.8 12.8 0 0 1 3.3-1.7l-.2-.4A17.3 17.3 0 0 0 7 5.1C4.2 9.2 3.5 13.2 3.9 17.1a17.7 17.7 0 0 0 5.4 2.7l.7-1.1a11 11 0 0 1-1.7-.8l.4-.3a12.6 12.6 0 0 0 10.8 0l.4.3c-.5.3-1.1.6-1.7.8l.7 1.1a17.5 17.5 0 0 0 5.4-2.7c.5-4.5-.8-8.4-3.8-12Zm-9.4 9.6c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm6.4 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z" />
+          </svg>
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="discord-copy">
+            <span class="discord-label">Discord</span>
+            <span class="status-copy" data-status-copy>Checking status</span>
+          </span>
+        </a>
+      </div>
       <h1 id="page-title">Rev</h1>
       <p class="lede">
         I make small, fast interfaces with careful motion, warm systems, and the occasional tool that feels better than it needs to.
@@ -81,6 +102,44 @@ const visibleCount = 3;
   </main>
 
   <script>
+    const discordStatus = document.querySelector("[data-discord-status]");
+    const discordStatusCopy = document.querySelector("[data-status-copy]");
+
+    type DiscordStatus = "online" | "idle" | "dnd" | "offline";
+    type DiscordActivity = { type?: number; name?: string };
+
+    const statusLabels: Record<DiscordStatus, string> = {
+      online: "Online",
+      idle: "Idle",
+      dnd: "Busy",
+      offline: "Offline"
+    };
+
+    async function updateDiscordStatus() {
+      if (!(discordStatus instanceof HTMLAnchorElement) || !(discordStatusCopy instanceof HTMLElement)) return;
+
+      try {
+        const request = await fetch("https://api.lanyard.rest/v1/users/192485745087348736");
+        if (!request.ok) throw new Error("Discord status unavailable");
+
+        const { data } = await request.json();
+        const status = data?.discord_status as DiscordStatus | undefined ?? "offline";
+        const label = statusLabels[status] ?? "Offline";
+        const username = data?.discord_user?.global_name ?? data?.discord_user?.username ?? "Rev";
+        const activity = (data?.activities as DiscordActivity[] | undefined)?.find((item) => item?.type === 0 || item?.type === 2)?.name;
+
+        discordStatus.dataset.status = status;
+        discordStatusCopy.textContent = activity ? `${username} · ${label} · ${activity}` : `${username} · ${label}`;
+        discordStatus.setAttribute("aria-label", `Discord: ${discordStatusCopy.textContent}`);
+      } catch {
+        discordStatus.dataset.status = "offline";
+        discordStatusCopy.textContent = "Status unavailable";
+        discordStatus.setAttribute("aria-label", "Discord status unavailable");
+      }
+    }
+
+    updateDiscordStatus();
+
     const sections = document.querySelectorAll(".index-section");
 
     sections.forEach((section) => {
