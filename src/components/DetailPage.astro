@@ -1,0 +1,72 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import type { DetailBlock, PortfolioItem } from "../lib/content";
+
+interface Props {
+  item: PortfolioItem;
+}
+
+const { item } = Astro.props as Props;
+const description = item.summary ?? `${item.kind === "writing" ? "Writing" : "Work"} by Rev.`;
+const blocks: DetailBlock[] = item.body?.length ? item.body : item.summary ? [{ type: "paragraph", text: item.summary }] : [];
+---
+
+<BaseLayout title={`${item.title} — Rev`} description={description}>
+  <main class="detail-shell" data-astro-transition-scope={`detail-${item.kind}`}>
+    <article class="detail-page">
+      <header class="detail-header stagger-in" style="--delay: 40ms">
+        <a class="back-pill" href="/">← Back</a>
+        <p class="detail-kicker">{item.kind}</p>
+        <h1>{item.title}</h1>
+        <p class="detail-meta">{item.date}{item.summary ? ` — ${item.summary}` : ""}</p>
+      </header>
+
+      <div class="detail-divider" aria-hidden="true"></div>
+
+      <section class="detail-body stagger-in" style="--delay: 120ms" aria-label={`${item.title} content`}>
+        {blocks.map((block: DetailBlock, index) => (
+          <>
+            {block.type === "paragraph" && (
+              <p class="detail-block" style={`--item-delay: ${index * 70}ms`}>{block.text}</p>
+            )}
+
+            {block.type === "heading" && block.level === 2 && (
+              <h2 class="detail-block" style={`--item-delay: ${index * 70}ms`} data-level={block.level}>{block.text}</h2>
+            )}
+
+            {block.type === "heading" && block.level === 3 && (
+              <h3 class="detail-block" style={`--item-delay: ${index * 70}ms`} data-level={block.level}>{block.text}</h3>
+            )}
+
+            {block.type === "bulleted-list" && (
+              <ul class="detail-block detail-list" style={`--item-delay: ${index * 70}ms`}>
+                {block.items.map((itemText) => <li>{itemText}</li>)}
+              </ul>
+            )}
+
+            {block.type === "numbered-list" && (
+              <ol class="detail-block detail-list" style={`--item-delay: ${index * 70}ms`}>
+                {block.items.map((itemText) => <li>{itemText}</li>)}
+              </ol>
+            )}
+
+            {block.type === "quote" && (
+              <blockquote class="detail-block" style={`--item-delay: ${index * 70}ms`}>
+                <p>{block.text}</p>
+              </blockquote>
+            )}
+
+            {block.type === "divider" && <hr class="detail-rule detail-block" style={`--item-delay: ${index * 70}ms`} />}
+
+            {block.type === "image" && (
+              <figure class="detail-block detail-figure" style={`--item-delay: ${index * 70}ms`}>
+                <img src={block.src} alt={block.alt ?? ""} loading="lazy" />
+                {block.caption && <figcaption>{block.caption}</figcaption>}
+              </figure>
+            )}
+          </>
+        ))}
+      </section>
+    </article>
+  </main>
+</BaseLayout>

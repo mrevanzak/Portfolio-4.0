@@ -1,0 +1,13 @@
+---
+import DetailPage from "../../components/DetailPage.astro";
+import { getPortfolioContent } from "../../lib/content";
+
+export async function getStaticPaths() {
+  const { work } = await getPortfolioContent();
+  return work.map((item) => ({ params: { slug: item.slug }, props: { item } }));
+}
+
+const { item } = Astro.props;
+---
+
+<DetailPage item={item} />

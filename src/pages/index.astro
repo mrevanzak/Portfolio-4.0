@@ -2,7 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPortfolioContent } from "../lib/content";
 
-const { work, writing } = await getPortfolioContent();
+const { work, writing } = await getPortfolioContent({ includeBody: false });
 ---
 
 <BaseLayout title="Rev" description="Design, engineering, and writing by Rev.">
