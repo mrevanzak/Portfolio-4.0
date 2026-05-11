@@ -1,0 +1,20 @@
+{
+  "name": "portfolio-4.0",
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "bun@latest",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@notionhq/client": "^2.3.0",
+    "astro": "^5.16.0",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {}
+}

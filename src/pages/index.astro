@@ -1,0 +1,45 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getPortfolioContent } from "../lib/content";
+
+const { work, writing, updatedAt } = await getPortfolioContent();
+---
+
+<BaseLayout title="Portfolio" description="A fast, animated portfolio powered by Astro and Notion.">
+  <main class="site-shell" data-astro-transition-scope="portfolio-home">
+    <header class="masthead" aria-labelledby="page-title">
+      <a class="skip-link" href="#content">Skip to content</a>
+      <p class="eyebrow" style="--delay: 40ms">Updated {updatedAt}</p>
+      <h1 id="page-title" style="--delay: 90ms">Your Name</h1>
+      <p class="intro" style="--delay: 140ms">
+        Designer and developer crafting calm interfaces, useful tools, and tiny details that make software feel better to use.
+      </p>
+    </header>
+
+    <section class="index-grid" id="content" aria-label="Portfolio index">
+      <div class="section-label" style="--delay: 190ms">work</div>
+      <ol class="motion-list" style="--delay: 220ms">
+        {work.map((item) => (
+          <li>
+            <a class="motion-row" href={item.href}>
+              <span class="row-title">{item.title}</span>
+              <span class="row-meta">{item.date}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+
+      <div class="section-label" style="--delay: 270ms">words</div>
+      <ol class="motion-list" style="--delay: 300ms">
+        {writing.map((item) => (
+          <li>
+            <a class="motion-row" href={item.href}>
+              <span class="row-title">{item.title}</span>
+              <span class="row-meta">{item.date}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </section>
+  </main>
+</BaseLayout>

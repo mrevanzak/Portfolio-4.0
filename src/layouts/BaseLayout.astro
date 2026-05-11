@@ -1,0 +1,53 @@
+---
+import { ClientRouter } from "astro:transitions";
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "Portfolio",
+  description = "Design, development, and writing."
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f7f0e8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1b1714" media="(prefers-color-scheme: dark)" />
+    <title>{title}</title>
+    <ClientRouter />
+    <script is:inline>
+      document.documentElement.classList.add("hover-cold");
+      let firstX = -1;
+      let firstY = -1;
+      function armHover() {
+        document.documentElement.classList.remove("hover-cold");
+        window.removeEventListener("pointermove", onFirstPointerMove);
+        window.removeEventListener("pointerdown", armHover);
+      }
+      function onFirstPointerMove(event) {
+        if (firstX < 0) {
+          firstX = event.clientX;
+          firstY = event.clientY;
+          return;
+        }
+        if (Math.abs(event.clientX - firstX) + Math.abs(event.clientY - firstY) > 12) {
+          armHover();
+        }
+      }
+      window.addEventListener("pointermove", onFirstPointerMove, { passive: true });
+      window.addEventListener("pointerdown", armHover, { passive: true });
+    </script>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
