@@ -6,7 +6,7 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints";
 import type { DetailBlock, PortfolioItem, PortfolioKind } from "./content";
 
-const token = import.meta.env.NOTION_TOKEN;
+const token = import.meta.env.NOTION_TOKEN ?? import.meta.env.NOTION_KEY;
 
 interface NotionItemOptions {
   includeBody?: boolean;
@@ -70,8 +70,13 @@ async function pageToPortfolioItem(
 
   const date = readDateLabel(page, "Date") ?? "Now";
   const summary = readText(page, "Summary");
+  let images = readPreviewImages(page);
   const itemKind = readSelect(page, "Type") === "writing" ? "writing" : kind;
   const body = includeBody ? await readPageBody(notion, page.id) : [];
+
+  if (!images?.length) {
+    images = await readPagePreviewImages(notion, page.id);
+  }
 
   return {
     kind: itemKind,
@@ -81,6 +86,7 @@ async function pageToPortfolioItem(
     date,
     href: `/${itemKind}/${slug}`,
     summary,
+    images,
     body: body.length > 0 ? body : undefined
   };
 }
@@ -162,9 +168,9 @@ function normalizeBlocks(blocks: BlockObjectResponse[]): DetailBlock[] {
     }
 
     if (block.type === "image") {
-      if (block.image.type !== "external") continue;
+      const src = readImageAssetUrl(block.image);
+      if (!src) continue;
 
-      const src = block.image.external.url;
       const caption = richTextToText(block.image.caption);
       normalized.push({
         type: "image",
@@ -189,6 +195,26 @@ function isBlockObject(block: BlockObjectResponse | unknown): block is BlockObje
   return Boolean(block && typeof block === "object" && "type" in block && "object" in block && (block as { object?: string }).object === "block");
 }
 
+async function readPagePreviewImages(notion: Client, pageId: string) {
+  const response = await notion.blocks.children.list({
+    block_id: pageId,
+    page_size: 20
+  });
+
+  const images = response.results
+    .filter(isBlockObject)
+    .flatMap((block) => {
+      if (block.type !== "image") return [];
+      const src = readImageAssetUrl(block.image);
+      if (!src) return [];
+
+      const caption = richTextToText(block.image.caption);
+      return [{ src, alt: caption || "Project preview" }];
+    });
+
+  return images.length > 0 ? images : undefined;
+}
+
 function readTitle(page: PageObjectResponse, propertyName: string) {
   const property = page.properties[propertyName];
   if (!property || property.type !== "title") return undefined;
@@ -199,6 +225,56 @@ function readText(page: PageObjectResponse, propertyName: string) {
   const property = page.properties[propertyName];
   if (!property || property.type !== "rich_text") return undefined;
   return property.rich_text.map((part) => part.plain_text).join("").trim() || undefined;
+}
+
+function readPreviewImages(page: PageObjectResponse) {
+  const images = [
+    ...readCoverImage(page),
+    ...readImages(page, "Images"),
+    ...readImages(page, "Image"),
+    ...readImages(page, "Thumbnail"),
+    ...readImages(page, "Cover"),
+    ...readImages(page, "Screenshot")
+  ];
+
+  return images.length > 0 ? images : undefined;
+}
+
+function readCoverImage(page: PageObjectResponse) {
+  if (!page.cover) return [];
+
+  const src = readImageAssetUrl(page.cover);
+  if (!src) return [];
+
+  return [
+    {
+      src,
+      alt: "Project cover"
+    }
+  ];
+}
+
+function readImages(page: PageObjectResponse, propertyName: string) {
+  const property = page.properties[propertyName];
+  if (!property || property.type !== "files") return [];
+
+  return property.files.flatMap((file) => {
+    if ("external" in file) {
+      return [{ src: file.external.url, alt: file.name || "Project preview" }];
+    }
+
+    if ("file" in file) {
+      return [{ src: file.file.url, alt: file.name || "Project preview" }];
+    }
+
+    return [];
+  });
+}
+
+function readImageAssetUrl(asset: { external?: { url: string }; file?: { url: string } }) {
+  if ("external" in asset && asset.external?.url) return asset.external.url;
+  if ("file" in asset && asset.file?.url) return asset.file.url;
+  return undefined;
 }
 
 function readSelect(page: PageObjectResponse, propertyName: string) {

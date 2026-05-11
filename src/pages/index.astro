@@ -3,6 +3,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPortfolioContent } from "../lib/content";
 
 const { work, writing } = await getPortfolioContent({ includeBody: false });
+const hasWriting = writing.length > 0;
+const visibleCount = 3;
 ---
 
 <BaseLayout title="Rev" description="Design, engineering, and writing by Rev.">
@@ -21,33 +23,93 @@ const { work, writing } = await getPortfolioContent({ includeBody: false });
 
       <section class="index-section stagger-in" style="--delay: 80ms" aria-labelledby="work-title">
         <h2 id="work-title">Work</h2>
-        <ol class="page-list">
+        <ol class="page-list" data-more-list>
           {work.map((item, index) => (
-            <li style={`--item-delay: ${120 + index * 45}ms`}>
-              <a class="page-link" href={item.href}>
-                <span class="link-title">{item.title}</span>
-                {item.summary && <span class="link-summary">{item.summary}</span>}
+            <li class:list={[index >= visibleCount && "extra-item"]} style={`--item-delay: ${120 + index * 45}ms`} hidden={index >= visibleCount}>
+              <a class:list={["page-link", item.images?.length && "has-image-stack"]} href={item.href}>
+                {item.images?.length && (
+                  <span class="image-stack" aria-hidden="true">
+                    {item.images.slice(0, 3).map((image, imageIndex) => (
+                      <span class="image-stack-card" style={`--stack-index: ${imageIndex}`}>
+                        <img src={image.src} alt="" loading="lazy" decoding="async" />
+                      </span>
+                    ))}
+                  </span>
+                )}
+                <span class="link-copy">
+                  <span class="link-title">{item.title}</span>
+                  {item.summary && <span class="link-summary">{item.summary}</span>}
+                </span>
               </a>
             </li>
           ))}
         </ol>
+        {work.length > visibleCount && (
+          <div class="more-controls" data-more-controls>
+            <button class="pill-button" type="button" data-show-more>Show more</button>
+            <button class="pill-button secondary" type="button" data-show-less hidden>Go back</button>
+          </div>
+        )}
       </section>
 
-      <div class="entry-divider" aria-hidden="true"></div>
+      {hasWriting && (
+        <>
+          <div class="entry-divider" aria-hidden="true"></div>
 
-      <section class="index-section stagger-in" style="--delay: 160ms" aria-labelledby="writing-title">
-        <h2 id="writing-title">Writing</h2>
-        <ol class="page-list">
-          {writing.map((item, index) => (
-            <li style={`--item-delay: ${220 + index * 45}ms`}>
-              <a class="page-link" href={item.href}>
-                <span class="link-title">{item.title}</span>
-                {item.summary && <span class="link-summary">{item.summary}</span>}
-              </a>
-            </li>
-          ))}
-        </ol>
-      </section>
+          <section class="index-section stagger-in" style="--delay: 160ms" aria-labelledby="writing-title">
+            <h2 id="writing-title">Writing</h2>
+            <ol class="page-list" data-more-list>
+              {writing.map((item, index) => (
+                <li class:list={[index >= visibleCount && "extra-item"]} style={`--item-delay: ${220 + index * 45}ms`} hidden={index >= visibleCount}>
+                  <a class="page-link" href={item.href}>
+                    <span class="link-title">{item.title}</span>
+                    {item.summary && <span class="link-summary">{item.summary}</span>}
+                  </a>
+                </li>
+              ))}
+            </ol>
+            {writing.length > visibleCount && (
+              <div class="more-controls" data-more-controls>
+                <button class="pill-button" type="button" data-show-more>Show more</button>
+                <button class="pill-button secondary" type="button" data-show-less hidden>Go back</button>
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </section>
   </main>
+
+  <script>
+    const sections = document.querySelectorAll(".index-section");
+
+    sections.forEach((section) => {
+      const hiddenItems = section.querySelectorAll(".extra-item");
+      const showMore = section.querySelector("[data-show-more]");
+      const showLess = section.querySelector("[data-show-less]");
+
+      if (!hiddenItems.length || !(showMore instanceof HTMLButtonElement) || !(showLess instanceof HTMLButtonElement)) return;
+
+      showMore.addEventListener("click", () => {
+        hiddenItems.forEach((item) => {
+          if (item instanceof HTMLElement) item.hidden = false;
+        });
+        section.setAttribute("data-expanded", "true");
+        showMore.hidden = true;
+        showLess.hidden = false;
+        showLess.focus({ preventScroll: true });
+      });
+
+      showLess.addEventListener("click", () => {
+        hiddenItems.forEach((item) => {
+          if (item instanceof HTMLElement) item.hidden = true;
+        });
+        section.removeAttribute("data-expanded");
+        showLess.hidden = true;
+        showMore.hidden = false;
+        showMore.focus({ preventScroll: true });
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+  </script>
 </BaseLayout>
