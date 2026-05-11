@@ -8,16 +8,16 @@ export interface PortfolioItem {
 }
 
 const fallbackWork: PortfolioItem[] = [
-  { title: "Quiet Systems", date: "May 2026", href: "/work/quiet-systems" },
-  { title: "Index Cards", date: "Apr 2026", href: "/work/index-cards" },
-  { title: "Soft Tools", date: "Feb 2026", href: "/work/soft-tools" },
-  { title: "Archive Study", date: "Nov 2025", href: "/work/archive-study" }
+  { title: "Quiet Systems", date: "May 2026", href: "/work/quiet-systems", summary: "Interfaces for slower thinking" },
+  { title: "Index Cards", date: "Apr 2026", href: "/work/index-cards", summary: "A tiny research workspace" },
+  { title: "Soft Tools", date: "Feb 2026", href: "/work/soft-tools", summary: "Useful objects for daily software" },
+  { title: "Archive Study", date: "Nov 2025", href: "/work/archive-study", summary: "Notes, fragments, and retrieval" }
 ];
 
 const fallbackWriting: PortfolioItem[] = [
-  { title: "Interfaces Should Exhale", date: "May 2026", href: "/writing/interfaces-should-exhale" },
-  { title: "The Texture of Fast Software", date: "Mar 2026", href: "/writing/texture-of-fast-software" },
-  { title: "Notes on Small Details", date: "Jan 2026", href: "/writing/small-details" }
+  { title: "Interfaces Should Exhale", date: "May 2026", href: "/writing/interfaces-should-exhale", summary: "On calm, responsive surfaces" },
+  { title: "The Texture of Fast Software", date: "Mar 2026", href: "/writing/texture-of-fast-software", summary: "Speed as a material choice" },
+  { title: "Notes on Small Details", date: "Jan 2026", href: "/writing/small-details", summary: "What polish quietly teaches" }
 ];
 
 export async function getPortfolioContent() {

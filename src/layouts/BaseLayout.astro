@@ -8,8 +8,8 @@ interface Props {
 }
 
 const {
-  title = "Portfolio",
-  description = "Design, development, and writing."
+  title = "Rev",
+  description = "Design, engineering, and writing."
 } = Astro.props;
 ---
 
@@ -20,8 +20,8 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f7f0e8" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1b1714" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#faf6f2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1917" media="(prefers-color-scheme: dark)" />
     <title>{title}</title>
     <ClientRouter />
     <script is:inline>

@@ -2,44 +2,52 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPortfolioContent } from "../lib/content";
 
-const { work, writing, updatedAt } = await getPortfolioContent();
+const { work, writing } = await getPortfolioContent();
 ---
 
-<BaseLayout title="Portfolio" description="A fast, animated portfolio powered by Astro and Notion.">
-  <main class="site-shell" data-astro-transition-scope="portfolio-home">
-    <header class="masthead" aria-labelledby="page-title">
+<BaseLayout title="Rev" description="Design, engineering, and writing by Rev.">
+  <main class="page-shell" data-astro-transition-scope="portfolio-home">
+    <header class="intro-panel stagger-in" aria-labelledby="page-title">
       <a class="skip-link" href="#content">Skip to content</a>
-      <p class="eyebrow" style="--delay: 40ms">Updated {updatedAt}</p>
-      <h1 id="page-title" style="--delay: 90ms">Your Name</h1>
-      <p class="intro" style="--delay: 140ms">
-        Designer and developer crafting calm interfaces, useful tools, and tiny details that make software feel better to use.
+      <p class="kicker">Design & engineering</p>
+      <h1 id="page-title">Rev</h1>
+      <p class="lede">
+        I make small, fast interfaces with careful motion, warm systems, and the occasional tool that feels better than it needs to.
       </p>
     </header>
 
-    <section class="index-grid" id="content" aria-label="Portfolio index">
-      <div class="section-label" style="--delay: 190ms">work</div>
-      <ol class="motion-list" style="--delay: 220ms">
-        {work.map((item) => (
-          <li>
-            <a class="motion-row" href={item.href}>
-              <span class="row-title">{item.title}</span>
-              <span class="row-meta">{item.date}</span>
-            </a>
-          </li>
-        ))}
-      </ol>
+    <section class="content-index" id="content" aria-label="Portfolio index">
+      <div class="entry-divider" aria-hidden="true"></div>
 
-      <div class="section-label" style="--delay: 270ms">words</div>
-      <ol class="motion-list" style="--delay: 300ms">
-        {writing.map((item) => (
-          <li>
-            <a class="motion-row" href={item.href}>
-              <span class="row-title">{item.title}</span>
-              <span class="row-meta">{item.date}</span>
-            </a>
-          </li>
-        ))}
-      </ol>
+      <section class="index-section stagger-in" style="--delay: 80ms" aria-labelledby="work-title">
+        <h2 id="work-title">Work</h2>
+        <ol class="page-list">
+          {work.map((item, index) => (
+            <li style={`--item-delay: ${120 + index * 45}ms`}>
+              <a class="page-link" href={item.href}>
+                <span class="link-title">{item.title}</span>
+                {item.summary && <span class="link-summary">{item.summary}</span>}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <div class="entry-divider" aria-hidden="true"></div>
+
+      <section class="index-section stagger-in" style="--delay: 160ms" aria-labelledby="writing-title">
+        <h2 id="writing-title">Writing</h2>
+        <ol class="page-list">
+          {writing.map((item, index) => (
+            <li style={`--item-delay: ${220 + index * 45}ms`}>
+              <a class="page-link" href={item.href}>
+                <span class="link-title">{item.title}</span>
+                {item.summary && <span class="link-summary">{item.summary}</span>}
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
     </section>
   </main>
 </BaseLayout>
