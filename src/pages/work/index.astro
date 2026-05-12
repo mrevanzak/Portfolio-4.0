@@ -8,7 +8,7 @@ const { work } = await getPortfolioContent({ includeBody: false });
 <BaseLayout title="Work — Rev" description="Selected work by Rev.">
   <main class="page-shell route-enter-shell" data-route-shell data-route-view="work" data-route-kind="work" data-astro-transition-scope="portfolio-work">
     <header class="intro-panel stagger-in work-transition-header" aria-labelledby="page-title">
-      <a class="back-pill" href="/" transition:name="work-nav-affordance">← Back</a>
+      <a class="back-pill" href="/">← Back</a>
       <p class="kicker">Selected work</p>
       <h1 id="page-title">Work</h1>
       <p class="lede">A compact index of interfaces, systems, and small tools.</p>
@@ -17,8 +17,7 @@ const { work } = await getPortfolioContent({ includeBody: false });
     <section class="content-index" id="content" aria-label="Selected work">
       <div class="entry-divider" aria-hidden="true"></div>
 
-      <section class="index-section stagger-in work-transition-section" style="--delay: 80ms" aria-labelledby="work-list-title" transition:name="work-section">
-        <h2 id="work-list-title" transition:name="work-heading">Index</h2>
+      <section class="index-section stagger-in work-transition-section" style="--delay: 80ms" aria-label="Work index" transition:name="work-section">
         <ol class="page-list work-transition-list" transition:name="work-list">
           {work.map((item, index) => (
             <li style={`--item-delay: ${120 + index * 45}ms`}>
@@ -34,8 +33,8 @@ const { work } = await getPortfolioContent({ includeBody: false });
                 )}
                 <span class="link-copy">
                   <span class="link-title">{item.title}</span>
-                  {item.summary && <span class="link-summary">{item.summary}</span>}
                 </span>
+                <span class="work-link-meta">{item.date}</span>
               </a>
             </li>
           ))}

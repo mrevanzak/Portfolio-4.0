@@ -437,6 +437,30 @@ h2 {
   padding: 9px 0;
 }
 
+.work-transition-section {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.work-transition-list {
+  margin: -16px 0;
+}
+
+.work-transition-link.has-image-stack {
+  grid-template-columns: 154px minmax(0, 1fr) auto;
+  gap: 30px;
+  min-height: 116px;
+  padding: 15px 0;
+}
+
+.work-link-meta {
+  align-self: center;
+  color: var(--secondary);
+  font-size: 15px;
+  line-height: 1.35;
+  letter-spacing: -.025em;
+  white-space: nowrap;
+}
+
 .page-link::before {
   content: "";
   position: absolute;
@@ -475,6 +499,17 @@ h2 {
   margin-top: 12px;
   animation: fade-in-blur 560ms var(--ease-out-expo) both;
   animation-delay: 260ms;
+}
+
+.work-transition-section .more-controls {
+  justify-content: flex-end;
+  margin-top: 18px;
+  animation-name: work-affordance-in;
+  animation-duration: 620ms;
+}
+
+.work-transition-header .back-pill {
+  animation: work-affordance-in 620ms var(--ease-out-expo) 120ms both;
 }
 
 .pill-button {
@@ -655,9 +690,7 @@ h2 {
 }
 
 ::view-transition-group(work-section),
-::view-transition-group(work-list),
-::view-transition-group(work-heading),
-::view-transition-group(work-nav-affordance) {
+::view-transition-group(work-list) {
   animation-duration: var(--work-route-duration);
   animation-timing-function: var(--work-route-ease);
 }
@@ -704,6 +737,12 @@ h2 {
   100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
+@keyframes work-affordance-in {
+  from { opacity: 0; transform: translateY(10px) scale(.985); filter: blur(8px); }
+  72% { opacity: 1; transform: translateY(-2px) scale(1); filter: blur(1px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
 @keyframes route-shell-in {
   0% { opacity: 0; transform: translateY(22px); filter: blur(7px); }
   70% { opacity: 1; transform: translateY(-4px); filter: blur(1px); }
@@ -721,6 +760,8 @@ h2 {
   .page-list { margin: -7px 0; }
   .page-link { min-height: 48px; }
   .page-link.has-image-stack { grid-template-columns: 94px minmax(0, 1fr); gap: 17px; min-height: 74px; }
+  .work-transition-link.has-image-stack { grid-template-columns: 94px minmax(0, 1fr); gap: 17px; min-height: 82px; }
+  .work-link-meta { grid-column: 2; font-size: 13px; }
   .image-stack { width: 86px; height: 54px; }
   .image-stack-card { width: 66px; height: 40px; padding: 3px; }
   .detail-header h1 { font-size: 24px; }
