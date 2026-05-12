@@ -11,7 +11,15 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --route-ease: cubic-bezier(0.22, 0.03, 0.26, 1);
+  --route-duration: 560ms;
+  --work-route-duration: 760ms;
+  --work-route-ease: cubic-bezier(.19, 1, .22, 1);
   background: var(--surface);
+}
+
+:root[data-motion-debug="slow"] {
+  --route-duration: 4200ms;
+  --work-route-duration: 5200ms;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -609,8 +617,58 @@ h2 {
   to { opacity: 1; filter: blur(0); transform: translateY(0); }
 }
 
-::view-transition-old(root) { animation: route-out 500ms var(--route-ease) both; transform-origin: 50% 0%; }
-::view-transition-new(root) { animation: route-in 500ms var(--route-ease) both; transform-origin: 50% 0%; }
+::view-transition-old(root) { animation: route-out var(--route-duration) var(--route-ease) both; transform-origin: 50% 0%; }
+::view-transition-new(root) { animation: route-in var(--route-duration) var(--route-ease) both; transform-origin: 50% 0%; }
+
+:root[data-route-motion="home-to-work"]::view-transition-old(root) {
+  animation: work-home-out var(--work-route-duration) var(--work-route-ease) both;
+  transform-origin: 50% 12%;
+}
+
+:root[data-route-motion="home-to-work"]::view-transition-new(root) {
+  animation: work-index-in var(--work-route-duration) var(--work-route-ease) both;
+  transform-origin: 50% 18%;
+}
+
+:root[data-route-motion="work-to-home"]::view-transition-old(root) {
+  animation: work-index-out var(--work-route-duration) var(--work-route-ease) both;
+  transform-origin: 50% 18%;
+}
+
+:root[data-route-motion="work-to-home"]::view-transition-new(root) {
+  animation: work-home-in var(--work-route-duration) var(--work-route-ease) both;
+  transform-origin: 50% 12%;
+}
+
+:root[data-route-motion="home-to-work"]::view-transition-group(*),
+:root[data-route-motion="work-to-home"]::view-transition-group(*) {
+  animation-duration: var(--work-route-duration);
+  animation-timing-function: var(--work-route-ease);
+}
+
+:root[data-route-motion="home-to-work"]::view-transition-old(*),
+:root[data-route-motion="home-to-work"]::view-transition-new(*),
+:root[data-route-motion="work-to-home"]::view-transition-old(*),
+:root[data-route-motion="work-to-home"]::view-transition-new(*) {
+  animation-duration: var(--work-route-duration);
+  animation-timing-function: var(--work-route-ease);
+}
+
+::view-transition-group(work-section),
+::view-transition-group(work-list),
+::view-transition-group(work-heading),
+::view-transition-group(work-nav-affordance) {
+  animation-duration: var(--work-route-duration);
+  animation-timing-function: var(--work-route-ease);
+}
+
+::view-transition-old(work-section),
+::view-transition-new(work-section),
+::view-transition-old(work-list),
+::view-transition-new(work-list) {
+  height: 100%;
+  overflow: clip;
+}
 
 @keyframes route-out {
   from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
@@ -620,6 +678,29 @@ h2 {
 @keyframes route-in {
   0% { opacity: 0; transform: translateY(100px) scale(.986); filter: blur(18px); }
   72% { opacity: 1; transform: translateY(-6px) scale(1); filter: blur(1px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes work-home-out {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  45% { opacity: .72; transform: translateY(-10px) scale(.992); filter: blur(5px); }
+  to { opacity: 0; transform: translateY(-28px) scale(.982); filter: blur(16px); }
+}
+
+@keyframes work-index-in {
+  0% { opacity: 0; transform: translateY(86px) scale(.982); filter: blur(18px); }
+  58% { opacity: 1; transform: translateY(-7px) scale(1.002); filter: blur(2px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+@keyframes work-index-out {
+  from { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  to { opacity: 0; transform: translateY(38px) scale(.986); filter: blur(14px); }
+}
+
+@keyframes work-home-in {
+  0% { opacity: 0; transform: translateY(-34px) scale(.988); filter: blur(16px); }
+  68% { opacity: 1; transform: translateY(5px) scale(1); filter: blur(1px); }
   100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
@@ -655,6 +736,11 @@ h2 {
 
   ::view-transition-old(root),
   ::view-transition-new(root),
+  ::view-transition,
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-image-pair(*),
   .route-enter-shell .stagger-in,
   .route-enter-shell .page-list li,
   .route-enter-shell .detail-block,
