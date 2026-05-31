@@ -7,21 +7,12 @@ const { work } = await getPortfolioContent({ includeBody: false });
 
 <BaseLayout title="Work — Rev" description="Selected work by Rev.">
   <main class="page-shell route-enter-shell" data-route-shell data-route-view="work" data-route-kind="work" data-astro-transition-scope="portfolio-work">
-    <header class="intro-panel stagger-in work-transition-header" aria-labelledby="page-title">
-      <a class="back-pill" href="/">← Back</a>
-      <p class="kicker">Selected work</p>
-      <h1 id="page-title">Work</h1>
-      <p class="lede">A compact index of interfaces, systems, and small tools.</p>
-    </header>
-
     <section class="content-index" id="content" aria-label="Selected work">
-      <div class="entry-divider" aria-hidden="true"></div>
-
-      <section class="index-section stagger-in work-transition-section" style="--delay: 80ms" aria-labelledby="work-list-title" transition:name="work-section">
-        <h2 id="work-list-title" class="work-section-title" transition:name="work-heading">work</h2>
+      <section class="index-section work-transition-section" aria-labelledby="work-list-title" transition:name="work-section">
+        <h2 id="work-list-title" class="work-section-title" style="--stagger: 0" transition:name="work-heading">work</h2>
         <ol class="page-list work-transition-list" transition:name="work-list">
           {work.map((item, index) => (
-            <li style={`--item-delay: ${120 + index * 45}ms`}>
+            <li style={`--stagger: ${index + 1}`}>
               <a class:list={["page-link", "work-transition-link", item.images?.length && "has-image-stack"]} href={item.href} transition:name={`work-item-${item.slug ?? index}`}>
                 {item.images?.length && (
                   <span class="image-stack" aria-hidden="true">
@@ -39,6 +30,15 @@ const { work } = await getPortfolioContent({ includeBody: false });
               </a>
             </li>
           ))}
+          <li class="more-row-item" style={`--stagger: ${work.length + 1}`} transition:name="work-toggle-row">
+            <a class="page-link work-transition-link more-row-link" href="/" aria-label="Go back">
+              <span class="more-row-glyph" aria-hidden="true">←</span>
+              <span class="link-copy">
+                <span class="link-title">Go back</span>
+              </span>
+              <span class="work-link-meta" aria-hidden="true"></span>
+            </a>
+          </li>
         </ol>
       </section>
     </section>

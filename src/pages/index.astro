@@ -10,9 +10,9 @@ const discordUserId = "192485745087348736";
 
 <BaseLayout title="Rev" description="Design, engineering, and writing by Rev.">
   <main class="page-shell route-enter-shell" data-route-shell data-route-view="home" data-route-kind="home" data-astro-transition-scope="portfolio-home">
-    <header class="intro-panel stagger-in" aria-labelledby="page-title">
+    <header class="intro-panel" aria-labelledby="page-title">
       <a class="skip-link" href="#content">Skip to content</a>
-      <div class="intro-topline">
+      <div class="intro-topline" style="--stagger: 0">
         <p class="kicker">Design & engineering</p>
         <a
           class="discord-status"
@@ -33,8 +33,8 @@ const discordUserId = "192485745087348736";
           </span>
         </a>
       </div>
-      <h1 id="page-title">Rev</h1>
-      <p class="lede">
+      <h1 id="page-title" style="--stagger: 1">Rev</h1>
+      <p class="lede" style="--stagger: 1">
         I make small, fast interfaces with careful motion, warm systems, and the occasional tool that feels better than it needs to.
       </p>
     </header>
@@ -42,11 +42,11 @@ const discordUserId = "192485745087348736";
     <section class="content-index" id="content" aria-label="Portfolio index">
       <div class="entry-divider" aria-hidden="true"></div>
 
-      <section class="index-section work-transition-section stagger-in" style="--delay: 80ms" aria-labelledby="work-title" transition:name="work-section">
-        <h2 id="work-title" class="work-section-title" transition:name="work-heading">work</h2>
+      <section class="index-section work-transition-section" aria-labelledby="work-title" transition:name="work-section">
+        <h2 id="work-title" class="work-section-title" style="--stagger: 2" transition:name="work-heading">work</h2>
         <ol class="page-list work-transition-list" data-more-list transition:name="work-list">
           {work.slice(0, visibleCount).map((item, index) => (
-            <li style={`--item-delay: ${120 + index * 45}ms`}>
+            <li style={`--stagger: ${3 + index}`}>
               <a class:list={["page-link", "work-transition-link", item.images?.length && "has-image-stack"]} href={item.href} transition:name={`work-item-${item.slug ?? index}`}>
                 {item.images?.length && (
                   <span class="image-stack" aria-hidden="true">
@@ -64,36 +64,54 @@ const discordUserId = "192485745087348736";
               </a>
             </li>
           ))}
+          {work.length > visibleCount && (
+            <li class="more-row-item" style={`--stagger: ${3 + visibleCount}`} transition:name="work-toggle-row">
+              <a class="page-link work-transition-link more-row-link" href="/work" aria-label="Show more">
+                <span class="more-row-glyph" aria-hidden="true">+</span>
+                <span class="link-copy">
+                  <span class="link-title">Show more</span>
+                </span>
+                <span class="work-link-meta" aria-hidden="true">{work.length - visibleCount} more</span>
+              </a>
+            </li>
+          )}
         </ol>
-        {work.length > visibleCount && (
-          <div class="more-controls">
-            <a class="pill-button work-more-link" href="/work">Show more</a>
-          </div>
-        )}
       </section>
 
       {hasWriting && (
         <>
           <div class="entry-divider" aria-hidden="true"></div>
 
-          <section class="index-section stagger-in" style="--delay: 160ms" aria-labelledby="writing-title">
-            <h2 id="writing-title">Writing</h2>
+          <section class="index-section" aria-labelledby="writing-title">
+            <h2 id="writing-title" style={`--stagger: ${4 + visibleCount}`}>Writing</h2>
             <ol class="page-list" data-more-list>
               {writing.map((item, index) => (
-                <li class:list={[index >= visibleCount && "extra-item"]} style={`--item-delay: ${220 + index * 45}ms`} hidden={index >= visibleCount}>
+                <li class:list={[index >= visibleCount && "extra-item"]} style={`--stagger: ${5 + visibleCount + index}`} hidden={index >= visibleCount}>
                   <a class="page-link" href={item.href}>
                     <span class="link-title">{item.title}</span>
                     {item.summary && <span class="link-summary">{item.summary}</span>}
                   </a>
                 </li>
               ))}
+              {writing.length > visibleCount && (
+                <li class="more-row-item" style={`--stagger: ${5 + visibleCount + Math.min(writing.length, visibleCount)}`} data-writing-toggle>
+                  <button class="page-link more-row-link more-row-button" type="button" data-show-more aria-label="Show more">
+                    <span class="more-row-glyph" aria-hidden="true">+</span>
+                    <span class="link-copy">
+                      <span class="link-title">Show more</span>
+                    </span>
+                    <span class="work-link-meta" aria-hidden="true">{writing.length - visibleCount} more</span>
+                  </button>
+                  <button class="page-link more-row-link more-row-button" type="button" data-show-less hidden aria-label="Go back">
+                    <span class="more-row-glyph" aria-hidden="true">←</span>
+                    <span class="link-copy">
+                      <span class="link-title">Go back</span>
+                    </span>
+                    <span class="work-link-meta" aria-hidden="true"></span>
+                  </button>
+                </li>
+              )}
             </ol>
-            {writing.length > visibleCount && (
-              <div class="more-controls" data-more-controls>
-                <button class="pill-button" type="button" data-show-more>Show more</button>
-                <button class="pill-button secondary" type="button" data-show-less hidden>Go back</button>
-              </div>
-            )}
           </section>
         </>
       )}
