@@ -7,12 +7,18 @@ const { work } = await getPortfolioContent({ includeBody: false });
 
 <BaseLayout title="Work — Rev" description="Selected work by Rev.">
   <main class="page-shell route-enter-shell" data-route-shell data-route-view="work" data-route-kind="work" data-astro-transition-scope="portfolio-work">
+    <a class="back-chevron" href="/" aria-label="Back home" style="--stagger: 0" transition:name="work-back-chevron">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+        <polyline points="11.5 15.25 5.25 9 11.5 2.75" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
+      </svg>
+    </a>
+
     <section class="content-index" id="content" aria-label="Selected work">
       <section class="index-section work-transition-section" aria-labelledby="work-list-title" transition:name="work-section">
-        <h2 id="work-list-title" class="work-section-title" style="--stagger: 0" transition:name="work-heading">work</h2>
+        <h2 id="work-list-title" class="work-section-title" style="--stagger: 1" transition:name="work-heading">work</h2>
         <ol class="page-list work-transition-list" transition:name="work-list">
           {work.map((item, index) => (
-            <li style={`--stagger: ${index + 1}`}>
+            <li style={`--stagger: ${index + 2}`}>
               <a class:list={["page-link", "work-transition-link", item.images?.length && "has-image-stack"]} href={item.href} transition:name={`work-item-${item.slug ?? index}`}>
                 {item.images?.length && (
                   <span class="image-stack" aria-hidden="true">
@@ -30,15 +36,6 @@ const { work } = await getPortfolioContent({ includeBody: false });
               </a>
             </li>
           ))}
-          <li class="more-row-item" style={`--stagger: ${work.length + 1}`} transition:name="work-toggle-row">
-            <a class="page-link work-transition-link more-row-link" href="/" aria-label="Go back">
-              <span class="more-row-glyph" aria-hidden="true">←</span>
-              <span class="link-copy">
-                <span class="link-title">Go back</span>
-              </span>
-              <span class="work-link-meta" aria-hidden="true"></span>
-            </a>
-          </li>
         </ol>
       </section>
     </section>
