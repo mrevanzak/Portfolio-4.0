@@ -109,25 +109,16 @@ a { color: inherit; text-decoration: none; }
 
 .skip-link:focus { opacity: 1; transform: translateY(0); }
 
-.work-section-heading {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 -4px;
-}
-
-.work-section-heading .work-section-title {
-  margin: 0;
-}
-
 .back-chevron {
+  position: fixed;
+  top: calc(clamp(58px, 13vh, 118px) - 7px);
+  left: max(22px, calc((100vw - 592px) / 2 - 50px));
+  z-index: 5;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
   background: var(--pill-bg);
   color: var(--secondary);
@@ -157,6 +148,15 @@ a { color: inherit; text-decoration: none; }
 :root:not(.hover-cold) .back-chevron:hover svg,
 .back-chevron:focus-visible svg {
   transform: translateX(-2px);
+}
+
+@media (max-width: 650px) {
+  .back-chevron {
+    top: 14px;
+    left: 14px;
+    width: 32px;
+    height: 32px;
+  }
 }
 
 .intro-panel {
