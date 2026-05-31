@@ -396,6 +396,19 @@ h2 {
   letter-spacing: -.025em;
 }
 
+.work-section-title {
+  grid-column: 1 / -1;
+  position: static;
+  margin: 0 0 -4px;
+  color: var(--heading);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -.03em;
+  font-style: italic;
+  text-transform: lowercase;
+}
+
 .page-list {
   display: grid;
   gap: 1px;
@@ -690,7 +703,8 @@ h2 {
 }
 
 ::view-transition-group(work-section),
-::view-transition-group(work-list) {
+::view-transition-group(work-list),
+::view-transition-group(work-heading) {
   animation-duration: var(--work-route-duration);
   animation-timing-function: var(--work-route-ease);
 }
@@ -698,7 +712,9 @@ h2 {
 ::view-transition-old(work-section),
 ::view-transition-new(work-section),
 ::view-transition-old(work-list),
-::view-transition-new(work-list) {
+::view-transition-new(work-list),
+::view-transition-old(work-heading),
+::view-transition-new(work-heading) {
   height: 100%;
   overflow: clip;
 }
@@ -722,7 +738,6 @@ h2 {
 
 @keyframes work-index-in {
   0% { opacity: 0; transform: translateY(86px) scale(.982); filter: blur(18px); }
-  58% { opacity: 1; transform: translateY(-7px) scale(1.002); filter: blur(2px); }
   100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
@@ -733,8 +748,17 @@ h2 {
 
 @keyframes work-home-in {
   0% { opacity: 0; transform: translateY(-34px) scale(.988); filter: blur(16px); }
-  68% { opacity: 1; transform: translateY(5px) scale(1); filter: blur(1px); }
   100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+:root[data-route-motion="home-to-work"] .route-enter-shell .stagger-in,
+:root[data-route-motion="work-to-home"] .route-enter-shell .stagger-in {
+  animation-name: route-shell-in-flat;
+}
+
+@keyframes route-shell-in-flat {
+  from { opacity: 0; transform: translateY(14px); filter: blur(6px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
 @keyframes work-affordance-in {
@@ -757,6 +781,7 @@ h2 {
   .discord-status { max-width: 100%; }
   .index-section { grid-template-columns: 1fr; gap: 10px; }
   h2 { position: static; }
+  .work-section-title { margin-bottom: -2px; font-size: 18px; }
   .page-list { margin: -7px 0; }
   .page-link { min-height: 48px; }
   .page-link.has-image-stack { grid-template-columns: 94px minmax(0, 1fr); gap: 17px; min-height: 74px; }
@@ -786,6 +811,11 @@ h2 {
   .route-enter-shell .page-list li,
   .route-enter-shell .detail-block,
   .route-enter-shell .more-controls {
+    animation: none !important;
+  }
+
+  :root[data-route-motion="home-to-work"] .route-enter-shell .stagger-in,
+  :root[data-route-motion="work-to-home"] .route-enter-shell .stagger-in {
     animation: none !important;
   }
 }

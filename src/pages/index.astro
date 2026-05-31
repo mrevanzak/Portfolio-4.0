@@ -42,7 +42,8 @@ const discordUserId = "192485745087348736";
     <section class="content-index" id="content" aria-label="Portfolio index">
       <div class="entry-divider" aria-hidden="true"></div>
 
-      <section class="index-section work-transition-section stagger-in" style="--delay: 80ms" aria-label="Selected work" transition:name="work-section">
+      <section class="index-section work-transition-section stagger-in" style="--delay: 80ms" aria-labelledby="work-title" transition:name="work-section">
+        <h2 id="work-title" class="work-section-title" transition:name="work-heading">work</h2>
         <ol class="page-list work-transition-list" data-more-list transition:name="work-list">
           {work.slice(0, visibleCount).map((item, index) => (
             <li style={`--item-delay: ${120 + index * 45}ms`}>
