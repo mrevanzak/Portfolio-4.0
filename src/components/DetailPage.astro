@@ -9,6 +9,7 @@ interface Props {
 const { item } = Astro.props as Props;
 const description = item.summary ?? `${item.kind === "writing" ? "Writing" : "Work"} by Rev.`;
 const blocks: DetailBlock[] = item.body?.length ? item.body : item.summary ? [{ type: "paragraph", text: item.summary }] : [];
+const heroImage = item.images?.[0];
 ---
 
 <BaseLayout title={`${item.title} — Rev`} description={description}>
@@ -20,6 +21,12 @@ const blocks: DetailBlock[] = item.body?.length ? item.body : item.summary ? [{ 
         <h1>{item.title}</h1>
         <p class="detail-meta">{item.date}{item.summary ? ` — ${item.summary}` : ""}</p>
       </header>
+
+      {heroImage && (
+        <figure class="detail-hero">
+          <img src={heroImage.src} alt={heroImage.alt ?? ""} decoding="async" />
+        </figure>
+      )}
 
       <div class="detail-divider" aria-hidden="true"></div>
 

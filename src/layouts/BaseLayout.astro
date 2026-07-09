@@ -42,12 +42,18 @@ const {
         }
       }
 
+      function isDetail(path) {
+        return /^\/(work|writing)\/.+/.test(path);
+      }
+
       function getRouteMotion(fromUrl, toUrl) {
         const fromPath = cleanPath(fromUrl);
         const toPath = cleanPath(toUrl);
 
         if (fromPath === "/" && toPath === "/work") return "home-to-work";
         if (fromPath === "/work" && toPath === "/") return "work-to-home";
+        if (!isDetail(fromPath) && isDetail(toPath)) return "to-detail";
+        if (isDetail(fromPath) && !isDetail(toPath)) return "from-detail";
         return "default";
       }
 
@@ -103,6 +109,10 @@ const {
             event.direction = "back";
           } else if (routeMotion === "home-to-work" && "direction" in event) {
             event.direction = "forward";
+          } else if (routeMotion === "to-detail" && "direction" in event) {
+            event.direction = "forward";
+          } else if (routeMotion === "from-detail" && "direction" in event) {
+            event.direction = "back";
           }
         });
         document.addEventListener("astro:before-swap", (event) => {
