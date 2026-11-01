@@ -31,19 +31,26 @@ const discordUserId = "192485745087348736";
           data-status="loading"
           aria-label="Discord status: checking"
         >
-          <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M19.5 5.1A17.6 17.6 0 0 0 15.1 3.8l-.2.4a12.3 12.3 0 0 1 3.3 1.7 14 14 0 0 0-9.8 0 12.8 12.8 0 0 1 3.3-1.7l-.2-.4A17.3 17.3 0 0 0 7 5.1C4.2 9.2 3.5 13.2 3.9 17.1a17.7 17.7 0 0 0 5.4 2.7l.7-1.1a11 11 0 0 1-1.7-.8l.4-.3a12.6 12.6 0 0 0 10.8 0l.4.3c-.5.3-1.1.6-1.7.8l.7 1.1a17.5 17.5 0 0 0 5.4-2.7c.5-4.5-.8-8.4-3.8-12Zm-9.4 9.6c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm6.4 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z" />
-          </svg>
-          <span class="status-dot" aria-hidden="true"></span>
+          <span class="status-ring" aria-hidden="true">
+            <svg class="discord-mark" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M19.5 5.1A17.6 17.6 0 0 0 15.1 3.8l-.2.4a12.3 12.3 0 0 1 3.3 1.7 14 14 0 0 0-9.8 0 12.8 12.8 0 0 1 3.3-1.7l-.2-.4A17.3 17.3 0 0 0 7 5.1C4.2 9.2 3.5 13.2 3.9 17.1a17.7 17.7 0 0 0 5.4 2.7l.7-1.1a11 11 0 0 1-1.7-.8l.4-.3a12.6 12.6 0 0 0 10.8 0l.4.3c-.5.3-1.1.6-1.7.8l.7 1.1a17.5 17.5 0 0 0 5.4-2.7c.5-4.5-.8-8.4-3.8-12Zm-9.4 9.6c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm6.4 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z" />
+            </svg>
+            <img class="discord-avatar" alt="" width="40" height="40" data-discord-avatar hidden />
+            <span class="copy-badge">
+              <svg viewBox="0 0 12 12"><path d="M2.5 6.2 5 8.6l4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+            </span>
+          </span>
           <span class="discord-copy">
-            <span class="discord-label">Discord</span>
-            <span class="status-copy" data-status-copy>Checking status</span>
+            <span class="status-stat" data-status-stat>…</span>
+            <span class="status-copy" data-status-copy>@revn. · on discord</span>
           </span>
         </a>
       </div>
       <h1 id="page-title" style="--stagger: 1"><Signature /></h1>
       <p class="lede" style="--stagger: 1">
-        I make small, fast interfaces with careful motion, warm systems, and the occasional tool that feels better than it needs to.
+        I make small, fast interfaces with <span class="accent wave"><span class="sr-only">careful motion</span>{["careful", "motion"].map((word, w) => (
+          <>{w > 0 && " "}<span class="wave-word" aria-hidden="true">{[...word].map((char, i) => <span class="wave-char" style={`--i: ${w * 8 + i}`}>{char}</span>)}{w > 0 && <span class="wave-tail">,</span>}</span></>
+        ))}</span> warm systems, and the occasional tool that feels better than it needs to.
       </p>
     </header>
 
@@ -159,9 +166,35 @@ const discordUserId = "192485745087348736";
   <script>
     const discordStatus = document.querySelector("[data-discord-status]");
     const discordStatusCopy = document.querySelector("[data-status-copy]");
+    const discordStatusStat = document.querySelector("[data-status-stat]");
+    const discordAvatar = document.querySelector("[data-discord-avatar]");
 
     type DiscordStatus = "online" | "idle" | "dnd" | "offline";
-    type DiscordActivity = { type?: number; name?: string };
+    type DiscordActivity = { type?: number; name?: string; timestamps?: { start?: number } };
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    // Odometer swap: old text rolls up and out, new text rolls in from below.
+    async function rollText(el: HTMLElement, text: string) {
+      if (el.textContent === text) return;
+      if (reduceMotion.matches || !el.textContent) {
+        el.textContent = text;
+        return;
+      }
+      await el.animate([{ transform: "translateY(-55%)", opacity: 0, filter: "blur(2px)" }], { duration: 160, easing: "ease-in" }).finished;
+      el.textContent = text;
+      el.animate(
+        [{ transform: "translateY(55%)", opacity: 0, filter: "blur(2px)" }, { transform: "none", opacity: 1, filter: "none" }],
+        { duration: 340, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+      );
+    }
+
+    // GO Club-style stat: "2h 14m" reads better than a clock time.
+    function formatElapsed(start: number) {
+      const minutes = Math.max(1, Math.floor((Date.now() - start) / 60_000));
+      const hours = Math.floor(minutes / 60);
+      return hours ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
+    }
 
     const statusLabels: Record<DiscordStatus, string> = {
       online: "Online",
@@ -171,7 +204,7 @@ const discordUserId = "192485745087348736";
     };
 
     async function updateDiscordStatus() {
-      if (!(discordStatus instanceof HTMLAnchorElement) || !(discordStatusCopy instanceof HTMLElement)) return;
+      if (!(discordStatus instanceof HTMLAnchorElement) || !(discordStatusCopy instanceof HTMLElement) || !(discordStatusStat instanceof HTMLElement)) return;
 
       try {
         const request = await fetch("https://api.lanyard.rest/v1/users/192485745087348736");
@@ -180,18 +213,66 @@ const discordUserId = "192485745087348736";
         const { data } = await request.json();
         const status = data?.discord_status as DiscordStatus | undefined ?? "offline";
         const label = statusLabels[status] ?? "Offline";
-        const username = data?.discord_user?.global_name ?? data?.discord_user?.username ?? "Rev";
-        const activity = (data?.activities as DiscordActivity[] | undefined)?.find((item) => item?.type === 0 || item?.type === 2)?.name;
+        const user = data?.discord_user;
+        const activity = (data?.activities as DiscordActivity[] | undefined)?.find((item) => item?.type === 0 || item?.type === 2);
+        const start = activity?.timestamps?.start;
+
+        const doing = activity?.name ? `${activity.type === 2 ? "on" : "in"} ${activity.name}` : "on discord";
+        discordHandle = user?.username ? `@${user.username}` : "";
+
+        const stat = start ? formatElapsed(start) : label;
 
         discordStatus.dataset.status = status;
-        discordStatusCopy.textContent = activity ? `${username} · ${label} · ${activity}` : `${username} · ${label}`;
-        discordStatus.setAttribute("aria-label", `Discord: ${discordStatusCopy.textContent}`);
+        discordLabel = discordHandle ? `${discordHandle} · ${doing}` : doing;
+        rollText(discordStatusStat, stat);
+        if (!discordStatus.hasAttribute("data-copied")) rollText(discordStatusCopy, discordLabel);
+        discordStatus.setAttribute("aria-label", `Discord ${discordHandle}: ${label}, ${stat} ${doing}${discordHandle ? ". Copy username" : ""}`);
+
+        if (discordAvatar instanceof HTMLImageElement && user?.id && user?.avatar) {
+          discordAvatar.src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.webp?size=96`;
+          discordAvatar.hidden = false;
+        }
       } catch {
         discordStatus.dataset.status = "offline";
-        discordStatusCopy.textContent = "Status unavailable";
+        discordStatusStat.textContent = "offline";
+        discordStatusCopy.textContent = "status unavailable";
         discordStatus.setAttribute("aria-label", "Discord status unavailable");
       }
     }
+
+    // Discord has no public profile page (logged-out visitors land on discord.com), so a click copies the username to add.
+    let discordHandle = "";
+    let discordLabel = "";
+    let copiedTimer = 0;
+
+    async function copyText(text: string) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        // Older browsers and sandboxed frames block the async clipboard; the legacy path often still works.
+        const field = Object.assign(document.createElement("textarea"), { value: text });
+        field.style.cssText = "position:fixed;opacity:0";
+        document.body.append(field);
+        field.select();
+        const copied = document.execCommand("copy");
+        field.remove();
+        return copied;
+      }
+    }
+
+    discordStatus?.addEventListener("click", async (event) => {
+      if (!discordHandle || !(discordStatus instanceof HTMLElement) || !(discordStatusCopy instanceof HTMLElement)) return;
+      event.preventDefault();
+      const copied = await copyText(discordHandle.slice(1));
+      discordStatus.setAttribute("data-copied", "");
+      rollText(discordStatusCopy, copied ? `copied ${discordHandle}` : `add ${discordHandle}`);
+      window.clearTimeout(copiedTimer);
+      copiedTimer = window.setTimeout(() => {
+        discordStatus.removeAttribute("data-copied");
+        rollText(discordStatusCopy, discordLabel);
+      }, 1800);
+    });
 
     updateDiscordStatus();
     const discordStatusInterval = window.setInterval(updateDiscordStatus, 60_000);
