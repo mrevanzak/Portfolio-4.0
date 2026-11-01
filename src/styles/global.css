@@ -459,18 +459,6 @@ h2,
   max-width: 100%;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .wave-char,
-  .wave:hover .wave-char,
-  .discord-status[data-status="online"] .status-ring::after {
-    animation: none;
-  }
-  .status-ring,
-  .copy-badge {
-    transition: none;
-  }
-}
-
 .discord-avatar {
   position: absolute;
   inset: 0;
@@ -1478,43 +1466,70 @@ h2 {
   }
 }
 
+/*
+ * Reduced motion: reduce, don't remove. Anything that travels, zooms, spins or loops becomes a
+ * short fade or goes away; opacity and colour changes stay, so the page still answers back.
+ */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+  * {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
   }
 
-  ::view-transition-old(root),
-  ::view-transition-new(root),
-  ::view-transition,
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*),
-  ::view-transition-image-pair(*),
-  .route-enter-shell .stagger-in,
-  .route-enter-shell .page-list li,
-  .route-enter-shell .detail-block,
-  .route-enter-shell .more-controls,
-  .route-enter-shell [style*="--stagger"],
-  .polaroid-card {
+  /* Page changes: a plain crossfade; nothing slides or morphs into place. */
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+  }
+  ::view-transition-old(*) {
+    animation: rm-fade-out 180ms ease both !important;
+  }
+  ::view-transition-new(*) {
+    animation: rm-fade-in 180ms ease both !important;
+  }
+
+  /* Entrances keep the fade but lose the pop, rise and sweep. */
+  .back-chevron[data-back-mode="detail"],
+  .detail-hero,
+  .polaroid-card,
+  .detail-code[data-diff="played"] :is(.diff-add, .diff-remove)::before {
+    animation-name: rm-fade-in !important;
+  }
+
+  /* Loops and decorative movement go. */
+  .wave-char,
+  .wave:hover .wave-char,
+  .discord-status[data-status="online"] .status-ring::after {
     animation: none !important;
   }
 
-  :root[data-route-motion="home-to-work"] .route-enter-shell .stagger-in,
-  :root[data-route-motion="work-to-home"] .route-enter-shell .stagger-in,
-  :root[data-route-motion="home-to-work"]
-    .route-enter-shell
-    [style*="--stagger"],
-  :root[data-route-motion="work-to-home"]
-    .route-enter-shell
-    [style*="--stagger"] {
-    animation: none !important;
-    opacity: 1 !important;
-    filter: none !important;
+  /* Hover and press: colour and opacity only. These elements only ever move on interaction. */
+  .page-link,
+  .status-ring,
+  .discord-status,
+  .copy-badge,
+  .theme-toggle,
+  .theme-toggle svg,
+  .back-chevron svg,
+  .more-row-chevron,
+  .pill-button {
+    transform: none !important;
+  }
+  .has-image-stack:is(:hover, :focus-visible) .image-stack-card {
+    transform: translate(var(--rest-tx, 0), var(--rest-ty, 0)) !important;
+  }
+  .has-image-stack:active .polaroid-card {
+    scale: none;
+  }
+}
+
+@keyframes rm-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rm-fade-out {
+  to {
+    opacity: 0;
   }
 }
 

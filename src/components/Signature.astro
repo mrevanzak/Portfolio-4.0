@@ -19,12 +19,12 @@ const strokes = [
   document.addEventListener("astro:page-load", () => {
     const paths = [...document.querySelectorAll<SVGPathElement>("[data-signature] path")];
     if (!paths.length) return;
-    const instant = played || matchMedia("(prefers-reduced-motion: reduce)").matches;
-    played = true;
-    if (instant) {
+    // Draws even with reduced motion on: a stroke revealing in place doesn't move anything across the screen.
+    if (played) {
       paths.forEach((p) => (p.style.strokeDashoffset = "0"));
       return;
     }
+    played = true;
 
     const lift = 18; // pen-lift pause between strokes, in path units
     const lengths = paths.map((p) => p.getTotalLength());

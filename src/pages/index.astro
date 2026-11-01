@@ -174,11 +174,17 @@ const discordUserId = "192485745087348736";
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    // Odometer swap: old text rolls up and out, new text rolls in from below.
+    // Odometer swap: old text rolls up and out, new text rolls in from below (a plain crossfade with reduced motion).
     async function rollText(el: HTMLElement, text: string) {
       if (el.textContent === text) return;
-      if (reduceMotion.matches || !el.textContent) {
+      if (!el.textContent) {
         el.textContent = text;
+        return;
+      }
+      if (reduceMotion.matches) {
+        await el.animate([{ opacity: 0 }], { duration: 120, easing: "ease-in" }).finished;
+        el.textContent = text;
+        el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
         return;
       }
       await el.animate([{ transform: "translateY(-55%)", opacity: 0, filter: "blur(2px)" }], { duration: 160, easing: "ease-in" }).finished;

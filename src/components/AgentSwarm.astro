@@ -213,10 +213,13 @@
     }
   }
 
+  /* Reduced motion: the HUD fades in place and keys light up without popping. */
   @media (prefers-reduced-motion: reduce) {
     .swarm-keys,
+    .swarm-keys[data-open],
     .swarm-keys[data-launch] {
-      transition: opacity 120ms linear;
+      transform: translate(-50%, 0);
+      transition: opacity 160ms ease-out;
     }
     .swarm-keys[data-fail],
     .swarm-key[data-on],
@@ -303,6 +306,11 @@
     raf = requestAnimationFrame(tick);
   }
 
+  function blockLabel(block: HTMLElement) {
+    const text = (block.innerText || block.getAttribute("aria-label") || "").trim().split("\n")[0].toLowerCase();
+    return text.slice(0, 26) || "image";
+  }
+
   // The visitor scrolling takes priority; the swarm only follows along while they're hands-off.
   let lastUserScroll = 0;
   const markUserScroll = () => (lastUserScroll = performance.now());
@@ -351,8 +359,7 @@
 
     block.classList.remove("swarm-pending");
     block.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)" }], { duration: 380, easing: "ease-out" });
-    const label = (block.innerText || block.getAttribute("aria-label") || "block").trim().split("\n")[0].toLowerCase().slice(0, 26);
-    say(agent, `placed ${label || "image"}`);
+    say(agent, `placed ${blockLabel(block)}`);
     await sleep(140 * PACE);
     marquee.remove();
   }
@@ -373,8 +380,20 @@
     log.hidden = false;
     const swarm = { name: "swarm", color: "#e6f83a" };
 
+    // Reduced motion: no flying cursors or drawn boxes; blocks just fade back in, one by one, as the log fills.
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      say(swarm, `rebuilt ${page.name} (reduced motion)`);
+      blocks.forEach((block) => block.classList.add("swarm-pending"));
+      say(swarm, `wiping ${page.name}. rebuilding…`);
+      await sleep(300);
+      for (const [i, block] of blocks.entries()) {
+        if (!running) return;
+        const agent = AGENTS[i % AGENTS.length];
+        block.classList.remove("swarm-pending");
+        block.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: "ease-out" });
+        say({ name: agent[0], color: agent[1] }, `placed ${blockLabel(block)}`);
+        await sleep(120 * PACE);
+      }
+      say(swarm, `${page.name} rebuilt. esc to go live`);
       return;
     }
 
