@@ -99,6 +99,14 @@ const heroImage = item.images?.slice(0, 3).at(-1);
               </figure>
             )}
 
+            {block.type === "video" && (
+              <figure class="detail-block detail-figure" style={`--item-delay: ${index * 70}ms`}>
+                {/* #t nudges Safari to paint the first frame instead of a black box. */}
+                <video src={`${block.src}#t=0.001`} controls playsinline preload="metadata"></video>
+                {block.caption && <figcaption>{block.caption}</figcaption>}
+              </figure>
+            )}
+
             {block.type === "image" && (
               <figure class="detail-block detail-figure" style={`--item-delay: ${index * 70}ms`}>
                 <Photo src={block.src} widths={[510, 1020, 1530]} sizes="min(510px, calc(100vw - 40px))" alt={block.alt ?? ""} loading="lazy" decoding="async" />

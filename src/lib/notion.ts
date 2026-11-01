@@ -191,6 +191,20 @@ function normalizeBlocks(blocks: BlockObjectResponse[]): DetailBlock[] {
         alt: caption || undefined,
         caption: caption || undefined
       });
+      continue;
+    }
+
+    if (block.type === "video") {
+      const url = readImageAssetUrl(block.video);
+      if (!url) continue;
+
+      const caption = richTextToText(block.video.caption) || undefined;
+      if (block.video.type === "file") {
+        const ext = new URL(url).pathname.match(/\.(mp4|m4v|mov|webm)$/i)?.[0].toLowerCase() ?? ".mp4";
+        normalized.push({ type: "video", src: `/media/${block.id}${ext}`, remote: url, caption });
+      } else {
+        normalized.push({ type: "video", src: url, caption });
+      }
     }
   }
 

@@ -10,7 +10,9 @@ export type DetailBlock =
   | { type: "quote"; text: string }
   | { type: "divider" }
   | { type: "code"; code: string; language: string; caption?: string }
-  | { type: "image"; src: string; alt?: string; caption?: string };
+  | { type: "image"; src: string; alt?: string; caption?: string }
+  // `remote` is set for Notion-hosted files: the build downloads it to `src` (see pages/media).
+  | { type: "video"; src: string; remote?: string; caption?: string };
 
 export interface PortfolioImage {
   src: string;
