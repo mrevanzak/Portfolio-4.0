@@ -164,7 +164,8 @@ body {
 
 /* White pills carry their own cobalt ink, like GO Club's "+ Add" buttons. */
 .back-chevron,
-.pill-button {
+.pill-button,
+.skip-link {
   --heading: #14168a;
   --primary: #2a2fe8;
   --secondary: #4a4fd0;
@@ -218,6 +219,8 @@ a {
   border: 1px solid var(--divider);
   border-radius: 999px;
   background: var(--pill-bg);
+  color: var(--primary);
+  font-size: 12px;
   box-shadow: 0 10px 30px var(--shadow);
   opacity: 0;
   transform: translateY(-8px);
@@ -1718,5 +1721,65 @@ h2 {
     right: 14px;
     width: 34px;
     height: 34px;
+  }
+}
+
+.site-footer {
+  margin-top: 56px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+
+.site-footer p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.site-footer a {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--primary);
+  transition:
+    color 220ms var(--ease-out-quint),
+    opacity 220ms var(--ease-out-quint),
+    filter 220ms var(--ease-out-quint);
+}
+
+.footer-arrow {
+  display: inline-block;
+  opacity: 0.55;
+  transition:
+    opacity 220ms var(--ease-out-quint),
+    transform 320ms var(--ease-out-expo);
+}
+
+:root:not(.hover-cold) .site-footer a:hover,
+.site-footer a:focus-visible {
+  color: var(--heading);
+}
+
+:root:not(.hover-cold) .site-footer a:hover .footer-arrow,
+.site-footer a:focus-visible .footer-arrow {
+  opacity: 1;
+  transform: translate(2px, -2px);
+}
+
+/* Same focus trick as the work list: siblings soften while one link is hovered. */
+:root:not(.hover-cold) .site-footer p:has(a:hover) a:not(:hover),
+.site-footer p:has(a:focus-visible) a:not(:focus-visible) {
+  opacity: 0.42;
+  filter: blur(calc(var(--hover-blur) * 0.6));
+}
+
+.site-footer a:active {
+  scale: 0.96;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-arrow {
+    transform: none !important;
   }
 }

@@ -8,6 +8,11 @@ const { work, writing } = await getPortfolioContent({ includeBody: false });
 const hasWriting = writing.length > 0;
 const visibleCount = 3;
 const discordUserId = "192485745087348736";
+const oldPortfolios = [
+  ["v3", "https://portofolio-3-0.vercel.app"],
+  ["v2", "https://portofolio-2.vercel.app"],
+  ["og", "https://portofolio-1-kappa.vercel.app"]
+];
 ---
 
 <BaseLayout title="Rev" description="Design, engineering, and writing by Rev.">
@@ -161,6 +166,15 @@ const discordUserId = "192485745087348736";
         </>
       )}
     </section>
+
+    <footer class="site-footer" data-collapsible>
+      <p style={`--stagger: ${6 + visibleCount}`}>
+        Older portfolios:
+        {oldPortfolios.map(([label, href]) => (
+          <a href={href} target="_blank" rel="noreferrer">{label}<span class="footer-arrow" aria-hidden="true">↗</span></a>
+        ))}
+      </p>
+    </footer>
   </main>
 
   <script>
