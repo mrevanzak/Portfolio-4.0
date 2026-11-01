@@ -853,12 +853,20 @@ h1 {
   color: var(--shiki-dark) !important;
 }
 
-.detail-figure img {
+.detail-figure :is(img, video) {
   display: block;
   width: 100%;
   height: auto;
   border-radius: 16px;
   box-shadow: 0 16px 42px color-mix(in oklch, var(--shadow), transparent 25%);
+}
+
+/* Portrait phone recordings would be taller than the screen at full column width. */
+.detail-figure video {
+  width: auto;
+  max-width: 100%;
+  max-height: min(80svh, 720px);
+  margin-inline: auto;
 }
 
 .detail-figure figcaption,
