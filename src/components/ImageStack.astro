@@ -1,0 +1,70 @@
+---
+import type { PortfolioImage } from "../lib/content";
+
+interface Props {
+  images: PortfolioImage[];
+  // Row position: seeds the tilt and fan, and staggers the pop-in.
+  index: number;
+  class?: string;
+}
+
+const { images, index, class: className } = Astro.props as Props;
+const cards = images.slice(0, 3);
+
+// Park–Miller PRNG, as on ja.mt, so each row gets its own stable messy stack.
+function rng(seed: number): () => number {
+  let s = seed;
+  return () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
+}
+
+// Alternating resting tilts; the top card sits nearly straight.
+function tilts(count: number): number[] {
+  const next = rng(index * 4937 + 17);
+  const out = Array.from({ length: count }, (_, i) => {
+    const sign = (i % 2 === 0) === next() > 0.5 ? 1 : -1;
+    return sign * (i === count - 1 ? 0.3 + next() * 0.7 : 5 + next() * 4);
+  });
+  for (let i = 1; i < out.length; i++) if (Math.sign(out[i]) === Math.sign(out[i - 1])) out[i] = -out[i];
+  return out;
+}
+
+// Hover fan: one card up-left, one up-right, one dropped below, shuffled.
+function fan(): { tx: number; ty: number; rot: number }[] {
+  const next = rng(index * 6271 + 43);
+  const between = (a: number, b: number) => a + next() * (b - a);
+  const spots = [
+    { tx: between(-17, -8), ty: between(-15, -9) },
+    { tx: between(9, 17), ty: between(-15, -9) },
+    { tx: between(-4, 4), ty: between(3, 8) }
+  ];
+  for (let i = spots.length - 1; i > 0; i--) {
+    const j = Math.floor(next() * (i + 1));
+    [spots[i], spots[j]] = [spots[j], spots[i]];
+  }
+  const flip = next() > 0.5;
+  return spots.map((spot, i) => ({ ...spot, rot: ((i % 2 === 0) === flip ? -1 : 1) * between(3, 7) }));
+}
+
+const rotations = tilts(cards.length);
+const spread = fan();
+const px = (n: number) => `${n.toFixed(2)}px`;
+---
+
+{cards.length > 0 && (
+  <span class:list={["image-stack", className]} aria-hidden="true">
+    {cards.map((image, i) => {
+      const top = i === cards.length - 1;
+      const { tx, ty, rot } = spread[i];
+      return (
+        <span
+          class="image-stack-card"
+          style={`--fan-tx: ${px(tx)}; --fan-ty: ${px(ty)}; --fan-rot: ${rot.toFixed(2)}deg; --rest-tx: ${px(top ? 0 : tx * 0.15)}; --rest-ty: ${px(top ? 0 : ty * 0.15)}`}
+        >
+          <span class="polaroid-card" style={`--rot-to: ${rotations[i].toFixed(2)}deg; --pop-index: ${index + i * 0.5}`}>
+            <img src={image.src} alt="" loading="lazy" decoding="async" draggable="false" />
+          </span>
+        </span>
+      );
+    })}
+  </span>
+)}

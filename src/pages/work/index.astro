@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import ImageStack from "../../components/ImageStack.astro";
 import { getPortfolioContent } from "../../lib/content";
 
 const { work } = await getPortfolioContent({ includeBody: false });
@@ -20,15 +21,7 @@ const { work } = await getPortfolioContent({ includeBody: false });
           {work.map((item, index) => (
             <li style={`--stagger: ${index + 2}`}>
               <a class:list={["page-link", "work-transition-link", item.images?.length && "has-image-stack"]} href={item.href} transition:name={`work-item-${item.slug ?? index}`}>
-                {item.images?.length && (
-                  <span class="image-stack" aria-hidden="true">
-                    {item.images.slice(0, 3).map((image, imageIndex) => (
-                      <span class="image-stack-card" style={`--stack-index: ${imageIndex}`}>
-                        <img src={image.src} alt="" loading="lazy" decoding="async" />
-                      </span>
-                    ))}
-                  </span>
-                )}
+                {item.images?.length && <ImageStack images={item.images} index={index} />}
                 <span class="link-copy">
                   <span class="link-title">{item.title}</span>
                 </span>

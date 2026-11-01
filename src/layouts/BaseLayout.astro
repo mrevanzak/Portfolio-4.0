@@ -190,14 +190,8 @@ const {
           return pages.get(path);
         };
 
-        const topCard = (link) => {
-          let best = null, bz = -1;
-          link.querySelectorAll(".image-stack-card").forEach((c) => {
-            const z = +getComputedStyle(c).zIndex || 0;
-            if (z > bz) { bz = z; best = c; }
-          });
-          return best;
-        };
+        // The last card in the stack paints on top.
+        const topCard = (link) => link.querySelector(".image-stack-card:last-child .polaroid-card");
         const stackLink = (path) =>
           [...document.querySelectorAll("a.has-image-stack")].find((a) => clean(a.href) === path);
 
@@ -211,7 +205,8 @@ const {
         const cardRect = (card) => {
           const r = card.getBoundingClientRect();
           const w = card.offsetWidth, h = card.offsetHeight;
-          return { x: r.left + r.width / 2 - w / 2, y: r.top + r.height / 2 - h / 2, w, h, rot: rotOf(card), b: 4 };
+          const rot = rotOf(card) + rotOf(card.parentElement); // own tilt + fan
+          return { x: r.left + r.width / 2 - w / 2, y: r.top + r.height / 2 - h / 2, w, h, rot, b: 2.8 };
         };
         const heroTarget = () => {
           const col = Math.min(innerWidth, 550), w = col - 40;
@@ -297,10 +292,10 @@ const {
         function tuck(link, top, on) {
           link.querySelectorAll(".image-stack-card").forEach((c) => {
             c.getAnimations().forEach((a) => a.id === "stack-tuck" && a.cancel());
-            if (!on || c === top) return;
-            const i = parseFloat(c.style.getPropertyValue("--stack-index")) || 0;
+            if (!on || c.contains(top)) return;
+            const rest = `translate(${c.style.getPropertyValue("--rest-tx")}, ${c.style.getPropertyValue("--rest-ty")})`;
             c.animate(
-              [{ transform: getComputedStyle(c).transform }, { transform: `translate(${i * 9}px, ${i * -3}px) rotate(${(i - 1) * 4}deg)` }],
+              [{ transform: getComputedStyle(c).transform }, { transform: rest }],
               { id: "stack-tuck", duration: 350 * speed(), easing: "cubic-bezier(0.34, 1.4, 0.64, 1)", fill: "forwards" }
             );
           });

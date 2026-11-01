@@ -9,8 +9,8 @@ interface Props {
 const { item } = Astro.props as Props;
 const description = item.summary ?? `${item.kind === "writing" ? "Writing" : "Work"} by Rev.`;
 const blocks: DetailBlock[] = item.body?.length ? item.body : item.summary ? [{ type: "paragraph", text: item.summary }] : [];
-// Same photo that sits on top of the index stack (2nd card), so the hero morph lands on it.
-const heroImage = item.images?.[1] ?? item.images?.[0];
+// Same photo that sits on top of the index stack (last of the first three), so the hero morph lands on it.
+const heroImage = item.images?.slice(0, 3).at(-1);
 ---
 
 <BaseLayout title={`${item.title} — Rev`} description={description}>
