@@ -1,0 +1,70 @@
+---
+// "Rev" traced from Caveat's glyphs into pen strokes, in writing order, so it can draw on like a signature.
+const strokes = [
+  "M73 15C72.3 18.5 72.8 26 69 36C65.2 46 54 65.8 50 75C46 84.2 48.2 83.3 45 91C41.8 98.7 36.8 105.8 31 121C25.2 136.2 13.5 171.8 10 182", // R stem
+  "M73 15C74.2 14.3 77 11.8 80 11C83 10.2 85.7 9.7 91 10C96.3 10.3 106.2 11.3 112 13C117.8 14.7 122 16.8 126 20C130 23.2 134.2 28.2 136 32C137.8 35.8 137.2 39.7 137 43C136.8 46.3 135.8 49.5 135 52C134.2 54.5 134.5 54.8 132 58C129.5 61.2 125.2 66.5 120 71C114.8 75.5 106.7 81.3 101 85C95.3 88.7 93.2 90.2 86 93C78.8 95.8 63.7 100.5 58 102C52.3 103.5 53.8 99.7 52 102C50.2 104.3 46.5 111.2 47 116C47.5 120.8 51.2 125.5 55 131C58.8 136.5 63.3 142.2 70 149C76.7 155.8 87.5 166 95 172C102.5 178 111.7 182.8 115 185", // R bowl into leg
+  "M160 112C160.7 109.8 161.2 103.3 164 99C166.8 94.7 173 89 177 86C181 83 184 81.7 188 81C192 80.3 197.8 80.8 201 82C204.2 83.2 205.8 86.3 207 88C208.2 89.7 208 90 208 92C208 94 208.2 97.2 207 100C205.8 102.8 202.8 106.8 201 109C199.2 111.2 198.7 111.7 196 113C193.3 114.3 190.3 116.7 185 117C179.7 117.3 168.3 115.8 164 115C159.7 114.2 160.7 111.5 159 112C157.3 112.5 155.3 115.2 154 118C152.7 120.8 151.2 123.7 151 129C150.8 134.3 152.3 145.8 153 150C153.7 154.2 153.2 152.2 155 154C156.8 155.8 161 159.5 164 161C167 162.5 169.5 163.2 173 163C176.5 162.8 180.8 162.3 185 160C189.2 157.7 195.8 150.8 198 149", // e
+  "M237 91C237.7 93 239.5 96.2 241 103C242.5 109.8 244.7 125.5 246 132C247.3 138.5 247.8 139.7 249 142C250.2 144.3 250.7 145.7 253 146C255.3 146.3 260 145.5 263 144C266 142.5 264.7 145.3 271 137C277.3 128.7 296 101.2 301 94" // v
+];
+---
+
+<svg class="signature" viewBox="0 0 311 195" role="img" aria-label="Rev" data-signature>
+  {strokes.map((d) => <path d={d} pathLength="1" />)}
+</svg>
+
+<script>
+  // Plays once per visit, like ja.mt: one eased pass over all strokes, each taking time in proportion to its length.
+  let played = false;
+
+  document.addEventListener("astro:page-load", () => {
+    const paths = [...document.querySelectorAll<SVGPathElement>("[data-signature] path")];
+    if (!paths.length) return;
+    const instant = played || matchMedia("(prefers-reduced-motion: reduce)").matches;
+    played = true;
+    if (instant) {
+      paths.forEach((p) => (p.style.strokeDashoffset = "0"));
+      return;
+    }
+
+    const lift = 18; // pen-lift pause between strokes, in path units
+    const lengths = paths.map((p) => p.getTotalLength());
+    const total = lengths.reduce((sum, l) => sum + l, 0) + lift * (paths.length - 1);
+    const speed = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--speed")) || 1;
+    let at = 0;
+    paths.forEach((path, i) => {
+      const start = at / total;
+      const end = (at + lengths[i]) / total;
+      at += lengths[i] + lift;
+      path.animate(
+        [
+          { offset: 0, strokeDashoffset: 1.02 },
+          { offset: start, strokeDashoffset: 1.02 },
+          { offset: end, strokeDashoffset: 0 },
+          { offset: 1, strokeDashoffset: 0 }
+        ],
+        { duration: 1250 * speed, delay: 200 * speed, easing: "cubic-bezier(0.22, 0.03, 0.35, 0.9)", fill: "forwards" }
+      );
+    });
+  });
+</script>
+
+<style>
+  .signature {
+    display: block;
+    width: auto;
+    height: 44px;
+    overflow: visible;
+    color: var(--heading);
+  }
+
+  .signature path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 13;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    /* Just over 1 so no seam shows once drawn; hidden until the script draws it. */
+    stroke-dasharray: 1.02 2;
+    stroke-dashoffset: 1.02;
+  }
+</style>

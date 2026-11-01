@@ -1,6 +1,26 @@
 ---
+import { Code } from "astro:components";
+import type { ComponentProps } from "astro/types";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import type { DetailBlock, PortfolioItem } from "../lib/content";
+
+// Notion language names are Shiki ids; Code falls back to plaintext for any it doesn't know.
+type CodeLang = ComponentProps<typeof Code>["lang"];
+
+// Tint whole +/- lines so a diff reads like a PR view, not just coloured text.
+// --i is the line's position among changed lines, which staggers the sweep-in.
+const isChange = (text: string | undefined): text is string => text?.[0] === "+" || text?.[0] === "-";
+const diffLines: ComponentProps<typeof Code>["transformers"] = [
+  {
+    line(node, line) {
+      const lines = this.source.split("\n");
+      const text = lines[line - 1];
+      if (!isChange(text)) return;
+      this.addClassToHast(node, text[0] === "+" ? "diff-add" : "diff-remove");
+      node.properties.style = `--i: ${lines.slice(0, line - 1).filter(isChange).length}`;
+    }
+  }
+];
 
 interface Props {
   item: PortfolioItem;
@@ -70,6 +90,13 @@ const heroImage = item.images?.slice(0, 3).at(-1);
             )}
 
             {block.type === "divider" && <hr class="detail-rule detail-block" style={`--item-delay: ${index * 70}ms`} />}
+
+            {block.type === "code" && (
+              <figure class="detail-block detail-code" style={`--item-delay: ${index * 70}ms`} data-diff={block.language === "diff" ? "" : undefined}>
+                <Code code={block.code} lang={block.language as CodeLang} themes={{ light: "github-light", dark: "github-dark" }} transformers={block.language === "diff" ? diffLines : undefined} />
+                {block.caption && <figcaption>{block.caption}</figcaption>}
+              </figure>
+            )}
 
             {block.type === "image" && (
               <figure class="detail-block detail-figure" style={`--item-delay: ${index * 70}ms`}>

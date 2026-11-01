@@ -9,6 +9,7 @@ export type DetailBlock =
   | { type: "numbered-list"; items: string[] }
   | { type: "quote"; text: string }
   | { type: "divider" }
+  | { type: "code"; code: string; language: string; caption?: string }
   | { type: "image"; src: string; alt?: string; caption?: string };
 
 export interface PortfolioImage {
