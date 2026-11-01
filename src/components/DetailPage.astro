@@ -2,6 +2,7 @@
 import { Code } from "astro:components";
 import type { ComponentProps } from "astro/types";
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Photo from "./Photo.astro";
 import type { DetailBlock, PortfolioItem } from "../lib/content";
 
 // Notion language names are Shiki ids; Code falls back to plaintext for any it doesn't know.
@@ -44,7 +45,7 @@ const heroImage = item.images?.slice(0, 3).at(-1);
     <article class="detail-page">
       {heroImage && (
         <figure class="detail-hero">
-          <img src={heroImage.src} alt={heroImage.alt ?? ""} decoding="async" />
+          <Photo src={heroImage.src} widths={[480, 960, 1440]} sizes="min(481px, calc(100vw - 69px))" alt={heroImage.alt ?? ""} decoding="async" fetchpriority="high" />
         </figure>
       )}
 
@@ -100,7 +101,7 @@ const heroImage = item.images?.slice(0, 3).at(-1);
 
             {block.type === "image" && (
               <figure class="detail-block detail-figure" style={`--item-delay: ${index * 70}ms`}>
-                <img src={block.src} alt={block.alt ?? ""} loading="lazy" />
+                <Photo src={block.src} widths={[510, 1020, 1530]} sizes="min(510px, calc(100vw - 40px))" alt={block.alt ?? ""} loading="lazy" decoding="async" />
                 {block.caption && <figcaption>{block.caption}</figcaption>}
               </figure>
             )}

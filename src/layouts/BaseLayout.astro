@@ -421,6 +421,9 @@ const {
           s.late = s.overlay.querySelectorAll(".detail-meta, .detail-divider, .detail-body");
           [...s.early, ...s.late].forEach((el) => (el.style.opacity = "0"));
           if (s.hero) {
+            // The flight lands holding the thumbnail; keep it showing until the full-size photo loads in.
+            const thumb = s.card.querySelector("img")?.currentSrc;
+            if (thumb) s.hero.style.backgroundImage = `url("${thumb}")`;
             s.hero.style.visibility = "hidden";
             s.hero.style.boxShadow = "none";
             const r = s.hero.getBoundingClientRect();
@@ -476,7 +479,7 @@ const {
           const h = s.hero.getBoundingClientRect();
           const flight = await fly(
             { x: h.left, y: h.top, w: h.width, h: h.height, rot: 0, b: 14.5 },
-            cardRect(s.card), s.heroImg, false,
+            cardRect(s.card), s.heroImg.naturalWidth ? s.heroImg : s.card.querySelector("img"), false,
             () => (s.overlay.firstElementChild.style.display = "none")
           );
           done();
