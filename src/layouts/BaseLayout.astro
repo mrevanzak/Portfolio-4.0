@@ -173,6 +173,21 @@ const {
         const E_SIZE = bez(0.35, 0.95, 0.25, 1);
         const REVEAL_EASE = "cubic-bezier(0.22, 0.03, 0.26, 1)";
 
+        // Diff code blocks sweep their +/- tints in the first time they scroll into view,
+        // on full detail pages and inside the overlay alike.
+        const diffObserver = new IntersectionObserver((entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            entry.target.dataset.diff = "played";
+            diffObserver.unobserve(entry.target);
+          }
+        }, { threshold: 0.5 });
+        const armDiffs = (scope) => scope.querySelectorAll("[data-diff='']").forEach((el) => {
+          el.dataset.diff = "armed";
+          diffObserver.observe(el);
+        });
+        document.addEventListener("astro:page-load", () => armDiffs(document));
+
         const lerp = (a, b, p) => a + (b - a) * p;
         const speed = () => parseFloat(getComputedStyle(root).getPropertyValue("--speed")) || 1;
         const wait = (ms) => new Promise((r) => setTimeout(r, ms * speed()));
@@ -349,6 +364,7 @@ const {
           s.overlay.setAttribute("aria-label", doc.title);
           s.overlay.innerHTML = `<div class="detail-shell">${src ? src.innerHTML : ""}</div>`;
           document.body.append(s.backdrop, s.overlay);
+          armDiffs(s.overlay);
           document.title = doc.title;
           s.backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400 * speed(), easing: "ease-out", fill: "forwards" });
 

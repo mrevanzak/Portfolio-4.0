@@ -514,11 +514,72 @@ h1 {
 /* Shiki paints its own background; swap it for a tint of the page so code sits in the palette. */
 .detail-code pre.astro-code {
   margin: 0;
-  padding: 14px 16px;
+  padding: 14px 0;
   border-radius: 12px;
   background-color: color-mix(in oklch, var(--primary) 7%, var(--surface)) !important;
   font-size: 12px;
   line-height: 1.6;
+}
+
+/* Full-width lines so diff tints reach both edges, even when the block scrolls. */
+.detail-code pre.astro-code code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+}
+
+.detail-code .line {
+  display: inline-block;
+  width: 100%;
+  padding: 0 16px;
+}
+
+.detail-code .diff-add {
+  --diff-tint: color-mix(in oklch, #2da44e 16%, transparent);
+  --diff-tint-hover: color-mix(in oklch, #2da44e 28%, transparent);
+}
+
+.detail-code .diff-remove {
+  --diff-tint: color-mix(in oklch, #cf222e 14%, transparent);
+  --diff-tint-hover: color-mix(in oklch, #cf222e 26%, transparent);
+}
+
+.detail-code :is(.diff-add, .diff-remove) {
+  position: relative;
+  isolation: isolate;
+}
+
+/* The tint is its own layer so it can sweep in with a transform and deepen on hover. */
+.detail-code :is(.diff-add, .diff-remove)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--diff-tint);
+  transform-origin: left;
+  transition: background-color 160ms ease;
+}
+
+/* Armed by BaseLayout's script, so without JS the tints simply show. */
+.detail-code[data-diff="armed"] :is(.diff-add, .diff-remove)::before {
+  transform: scaleX(0);
+}
+
+.detail-code[data-diff="played"] :is(.diff-add, .diff-remove)::before {
+  animation: diff-sweep calc(560ms * var(--speed)) var(--ease-out-quint) both;
+  animation-delay: calc((180ms + var(--i, 0) * 55ms) * var(--speed));
+}
+
+@keyframes diff-sweep {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@media (hover: hover) {
+  .detail-code :is(.diff-add, .diff-remove):hover::before {
+    background-color: var(--diff-tint-hover);
+  }
 }
 
 @media (prefers-color-scheme: dark) {
