@@ -382,13 +382,13 @@ const {
           [...s.early, ...s.late].forEach((el) => (el.style.opacity = ""));
           s.overlay.querySelector(".back-chevron")?.focus({ preventScroll: true });
           s.phase = "open";
-          if (s.pendingClose) close();
+          sync();
         }
 
         async function close() {
           const s = st;
           if (!s) return;
-          if (s.phase !== "open") { s.pendingClose = true; return; }
+          if (s.phase !== "open") return; // land() or done() re-syncs
           s.phase = "closing";
           s.overlay.style.pointerEvents = "none";
           const out = [{ opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(6px)" }];
@@ -412,6 +412,7 @@ const {
             document.title = s.title;
             s.link.focus({ preventScroll: true });
             st = null;
+            sync();
           };
           if (!s.hero || !s.heroImg) return done();
           const h = s.hero.getBoundingClientRect();
@@ -424,7 +425,195 @@ const {
           fadeAway(flight);
         }
 
-        const requestClose = () => (history.state?.overlay ? history.back() : close());
+        // --- Home work list expands in place (the "More" row) ---
+        const SPRING = "linear(0, .1052, .3155, .532, .7112, .8414, .9265, .9765, 1.0023, 1.013, 1.0151, 1.0133, 1.01, 1.0068, 1.0041, 1.0022, 1.001, 1)";
+        const OUT_QUAD = "cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+        const IN_QUAD = "cubic-bezier(0.55, 0.085, 0.68, 0.53)";
+        const SLIDE = "cubic-bezier(0.35, 0.95, 0.25, 1)";
+        const timed = (ms, delay = 0, easing = "linear") => ({ duration: ms * speed(), delay: delay * speed(), easing, fill: "both" });
+
+        // Letter-by-letter swap: old glyphs float up and out, new ones rise in.
+        function morphText(el, text, ms) {
+          const token = (el.dataset.morph = String(Math.random()));
+          const chars = (str) => [...str].map((c) => Object.assign(document.createElement("span"), { className: "morph-char", textContent: c }));
+          el.querySelector(":scope > .morph-exit")?.remove(); // an interrupted morph's leftovers
+          const cs = getComputedStyle(el);
+          const gone = chars(el.textContent);
+          const exit = Object.assign(document.createElement("span"), { className: "morph-exit" });
+          exit.setAttribute("aria-hidden", "true");
+          exit.style.color = cs.color;
+          exit.style.fontStyle = cs.fontStyle;
+          exit.append(...gone);
+          const born = chars(text);
+          el.replaceChildren(...born, exit);
+          const run = (list, out) => {
+            const step = (ms * 0.3) / (list.length || 1);
+            const off = (y) => `translateY(${y}em) scale(0.6) rotate(2deg)`;
+            return list.map((c, i) => c.animate(
+              {
+                opacity: out ? [1, 0] : [0, 1],
+                transform: out ? ["none", off(-0.35)] : [off(0.35), "none"],
+                filter: out ? ["blur(0px)", "blur(0.1em)"] : ["blur(0.1em)", "blur(0px)"]
+              },
+              timed(ms, i * step, SPRING)
+            ).finished);
+          };
+          Promise.all([...run(gone, true), ...run(born, false)])
+            .then(() => { if (el.dataset.morph === token) el.textContent = text; })
+            .catch(() => {});
+        }
+
+        let listBusy = false;
+        const listParts = () => {
+          const shell = document.querySelector('[data-route-shell][data-route-view="home"]');
+          const row = shell?.querySelector("[data-more-row]");
+          if (!row) return null;
+          const section = row.closest(".index-section");
+          return {
+            shell, row, section,
+            hide: [...shell.querySelectorAll("[data-collapsible]")],
+            extras: [...section.querySelectorAll(".extra-item")],
+            back: shell.querySelector("[data-expand-back]"),
+            label: row.querySelector("[data-more-label]"),
+            date: row.querySelector("[data-more-date]"),
+            glyph: row.querySelector("[data-more-glyph]")
+          };
+        };
+        const isExpanded = () => !!document.querySelector('[data-route-shell][data-expanded]');
+
+        function settleList() {
+          listBusy = false;
+          sync();
+        }
+
+        function expand(push = true) {
+          const ui = listParts();
+          if (!ui || listBusy || isExpanded()) return;
+          listBusy = true;
+          if (push) history.pushState({ ...history.state, expanded: "work" }, "", "/work");
+          ui.shell.dataset.title = document.title;
+          document.title = "Work — Rev";
+          scrollTo({ top: 0, behavior: "instant" });
+
+          // Lift the intro and other sections out of flow where they stand, then fade them.
+          const box = ui.shell.getBoundingClientRect();
+          const fromY = ui.section.getBoundingClientRect().top;
+          const lifted = ui.hide.map((el) => {
+            const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+            return { el, r, opacity: cs.opacity, filter: cs.filter === "none" ? "blur(0px)" : cs.filter };
+          });
+          for (const { el, r } of lifted) {
+            Object.assign(el.style, { position: "absolute", top: `${r.top - box.top}px`, left: `${r.left - box.left}px`, width: `${r.width}px`, margin: "0" });
+            el.inert = true;
+          }
+          for (const { el, opacity, filter } of lifted) {
+            el.animate([{ opacity, filter }, { opacity: 0, filter: "blur(6px)" }], { ...timed(250, 0, OUT_QUAD), fill: "forwards" });
+          }
+          ui.shell.dataset.expanded = "work";
+          ui.extras.forEach((li) => (li.hidden = false));
+          ui.back.getAnimations().forEach((a) => a.cancel());
+          ui.back.hidden = false;
+          ui.section.animate([{ transform: `translateY(${fromY - ui.section.getBoundingClientRect().top}px)` }, { transform: "none" }], timed(500, 100, SLIDE));
+
+          // The More row becomes the entry it was previewing.
+          ui.row.classList.remove("more-row-link");
+          ui.row.querySelector(".image-stack")?.classList.remove("more-row-stack");
+          ui.row.href = ui.row.dataset.href;
+          ui.row.removeAttribute("aria-label");
+          morphText(ui.label, ui.row.dataset.title, 280);
+          ui.glyph.animate([{ opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(5px)" }], { ...timed(180), fill: "forwards" });
+          setTimeout(() => {
+            ui.glyph.hidden = true;
+            morphText(ui.date, ui.row.dataset.date, 320);
+          }, 210 * speed());
+
+          setTimeout(() => {
+            for (const { el } of lifted) {
+              el.getAnimations().forEach((a) => a.cancel());
+              el.removeAttribute("style");
+            }
+            settleList();
+          }, 600 * speed());
+        }
+
+        function collapse() {
+          const ui = listParts();
+          if (!ui || listBusy || !isExpanded()) return;
+          listBusy = true;
+          document.title = ui.shell.dataset.title || document.title;
+          scrollTo({ top: 0, behavior: "instant" });
+
+          const fromY = ui.section.getBoundingClientRect().top;
+          ui.extras.forEach((li) => li.animate([{ opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(6px)" }], { ...timed(300, 0, IN_QUAD), fill: "forwards" }));
+          ui.back.animate([{ scale: 1, opacity: 1 }, { scale: 0, opacity: 0 }], { ...timed(180, 0, "ease-in"), fill: "forwards" })
+            .finished.then(() => { if (!isExpanded()) ui.back.hidden = true; }).catch(() => {});
+
+          delete ui.shell.dataset.expanded;
+          ui.hide.forEach((el) => {
+            el.inert = false;
+            el.animate([{ opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)" }], timed(500, 450, OUT_QUAD));
+          });
+          ui.section.animate([{ transform: `translateY(${fromY - ui.section.getBoundingClientRect().top}px)` }, { transform: "none" }], timed(500, 350, SLIDE));
+
+          setTimeout(() => ui.extras.forEach((li) => {
+            li.hidden = true;
+            li.getAnimations().forEach((a) => a.cancel());
+          }), 300 * speed());
+
+          // Back into a More row once the slide is a third of the way home.
+          setTimeout(() => {
+            ui.row.classList.add("more-row-link");
+            ui.row.querySelector(".image-stack")?.classList.add("more-row-stack");
+            ui.row.href = "/work";
+            ui.row.setAttribute("aria-label", "Show more work");
+            morphText(ui.label, "More", 280);
+            morphText(ui.date, "", 320);
+            setTimeout(() => {
+              ui.glyph.hidden = false;
+              ui.glyph.animate([{ opacity: 0, filter: "blur(5px)" }, { opacity: 1, filter: "blur(0px)" }], timed(180));
+            }, 320 * speed());
+          }, 525 * speed());
+
+          setTimeout(settleList, 950 * speed());
+        }
+
+        // Entries this script pushed are popped; anything else (e.g. reached via forward) is rewritten in place.
+        function leaveTo(path) {
+          if (history.state?.overlay || (history.state?.expanded && path === "/")) return history.back();
+          history.replaceState({ ...history.state, overlay: undefined, expanded: undefined }, "", path);
+          sync();
+        }
+        const requestCollapse = () => leaveTo("/");
+
+        const requestClose = () => leaveTo(st.base);
+
+        // Make the page match the URL: overlay open or not, home list expanded or not.
+        // Runs on back/forward and again whenever an animation settles.
+        function sync() {
+          const here = clean(location.href);
+          const wantOverlay = isWork(here) ? here : null;
+          if (st) {
+            if (st.path !== wantOverlay) close();
+            return;
+          }
+          if (listBusy) return;
+          if (listParts()) {
+            const wantExpanded = here === "/work" || (!!wantOverlay && !!history.state?.expanded);
+            if (wantExpanded !== isExpanded()) return wantExpanded ? expand(false) : collapse();
+          }
+          const link = wantOverlay && !reduced.matches && stackLink(wantOverlay);
+          // Card photo not loaded yet: show the real page rather than nothing.
+          if (link) open(link, wantOverlay, false).then((ok) => ok || location.reload());
+        }
+
+        // Whether this document can show the URL in place (else ClientRouter swaps pages).
+        function ours() {
+          const here = clean(location.href);
+          if (reduced.matches && !st) return false;
+          if (st && here === st.base) return true;
+          if (isWork(here)) return st?.path === here || !!stackLink(here);
+          return !!listParts() && (here === "/" || here === "/work");
+        }
 
         document.addEventListener("click", (e) => {
           if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -436,6 +625,16 @@ const {
             return;
           }
           if (reduced.matches) return;
+          if (e.target.closest?.("[data-expand-back]")) {
+            e.preventDefault();
+            requestCollapse();
+            return;
+          }
+          if (e.target.closest?.("[data-more-row]") && !isExpanded()) {
+            e.preventDefault();
+            expand();
+            return;
+          }
           const link = e.target.closest?.("a.has-image-stack");
           if (!link || !isWork(clean(link.href))) return;
           const img = topCard(link)?.querySelector("img");
@@ -446,19 +645,9 @@ const {
 
         // Registered before ClientRouter's module runs, so this can stop it from swapping pages.
         window.addEventListener("popstate", (e) => {
-          if (st) {
-            if (clean(location.href) === st.base) {
-              e.stopImmediatePropagation();
-              close();
-            }
-            return;
-          }
-          const path = history.state?.overlay;
-          const link = path && !reduced.matches && stackLink(path);
-          if (link) {
-            e.stopImmediatePropagation();
-            open(link, path, false);
-          }
+          if (!ours()) return;
+          e.stopImmediatePropagation();
+          sync();
         }, { capture: true });
 
         document.addEventListener("keydown", (e) => {
@@ -475,6 +664,7 @@ const {
         // A real navigation from inside the overlay replaces the whole body.
         document.addEventListener("astro:before-swap", () => {
           st = null;
+          listBusy = false;
           root.classList.remove("overlay-open");
         });
       })();

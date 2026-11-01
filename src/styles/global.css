@@ -96,6 +96,7 @@ a {
 }
 
 .page-shell {
+  position: relative;
   width: min(100% - 44px, 592px);
   min-height: 100vh;
   margin: 0 auto;
@@ -1229,4 +1230,49 @@ h2 {
 
 .blur-locked {
   pointer-events: none;
+}
+
+/* Home work list expanded in place: lifted sections stay out of flow once faded. */
+[data-route-shell][data-expanded] [data-collapsible]:not([style]) {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.back-chevron[data-expand-back] {
+  animation: back-chevron-pop 420ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.more-row-glyph {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-more-label],
+[data-more-date] {
+  position: relative;
+  display: inline-block;
+}
+
+.more-row-date:empty {
+  display: none;
+}
+
+.morph-char {
+  display: inline-block;
+  white-space: pre;
+}
+
+.morph-exit {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.more-row-date .morph-exit {
+  left: auto;
+  right: 0;
 }
