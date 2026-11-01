@@ -142,5 +142,342 @@ const {
   </head>
   <body>
     <slot />
+    <script is:inline>
+      // Work detail opens as an overlay above the index (like ja.mt): the index never unmounts,
+      // so the hero can fly out of its stack card and back into it without a page swap.
+      (() => {
+        if (window.__workOverlay) return;
+        window.__workOverlay = true;
+
+        const DURATION = 530;
+        const root = document.documentElement;
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+        const bez = (x1, y1, x2, y2) => {
+          const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+          const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+          return (x) => {
+            let lo = 0, hi = 1, t = x;
+            for (let i = 0; i < 24; i++) {
+              const v = ((ax * t + bx) * t + cx) * t;
+              if (Math.abs(v - x) < 1e-5) break;
+              if (v < x) lo = t; else hi = t;
+              t = (lo + hi) / 2;
+            }
+            return ((ay * t + by) * t + cy) * t;
+          };
+        };
+        const E_ROT = bez(0.4, 0.9, 0.25, 1);
+        const E_Y = bez(0.35, 1, 0.25, 1);
+        const E_X = bez(0.45, 0.9, 0.25, 1);
+        const E_SIZE = bez(0.35, 0.95, 0.25, 1);
+        const REVEAL_EASE = "cubic-bezier(0.22, 0.03, 0.26, 1)";
+
+        const lerp = (a, b, p) => a + (b - a) * p;
+        const speed = () => parseFloat(getComputedStyle(root).getPropertyValue("--speed")) || 1;
+        const wait = (ms) => new Promise((r) => setTimeout(r, ms * speed()));
+        const clean = (u) => new URL(u, location.href).pathname.replace(/\/+$/, "") || "/";
+        const isWork = (path) => /^\/work\/[^/]+$/.test(path);
+
+        const pages = new Map();
+        const load = (path) => {
+          if (!pages.has(path)) {
+            pages.set(path, fetch(path)
+              .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
+              .then((html) => new DOMParser().parseFromString(html, "text/html"))
+              .catch((err) => { pages.delete(path); throw err; }));
+          }
+          return pages.get(path);
+        };
+
+        const topCard = (link) => {
+          let best = null, bz = -1;
+          link.querySelectorAll(".image-stack-card").forEach((c) => {
+            const z = +getComputedStyle(c).zIndex || 0;
+            if (z > bz) { bz = z; best = c; }
+          });
+          return best;
+        };
+        const stackLink = (path) =>
+          [...document.querySelectorAll("a.has-image-stack")].find((a) => clean(a.href) === path);
+
+        const rotOf = (el) => {
+          const v = getComputedStyle(el).transform.match(/matrix\(([^)]+)\)/);
+          if (!v) return 0;
+          const [a, b] = v[1].split(",").map(Number);
+          return Math.atan2(b, a);
+        };
+        // Unrotated box around the element's visual center (getBoundingClientRect inflates rotated boxes).
+        const cardRect = (card) => {
+          const r = card.getBoundingClientRect();
+          const w = card.offsetWidth, h = card.offsetHeight;
+          return { x: r.left + r.width / 2 - w / 2, y: r.top + r.height / 2 - h / 2, w, h, rot: rotOf(card), b: 4 };
+        };
+        const heroTarget = () => {
+          const col = Math.min(innerWidth, 550), w = col - 40;
+          return { x: (innerWidth - col) / 2 + 20, y: 80, w, h: Math.round(((w - 29) * 3) / 5 + 29), rot: 0, b: 14.5 };
+        };
+
+        function paint(ctx, dpr, r, img, k) {
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.clearRect(0, 0, innerWidth, innerHeight);
+          ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
+          ctx.rotate(r.rot);
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(-r.w / 2, -r.h / 2, r.w, r.h);
+          const iw = r.w - 2 * r.b, ih = r.h - 2 * r.b;
+          if (iw <= 0 || ih <= 0) return;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(-iw / 2, -ih / 2, iw, ih);
+          ctx.clip();
+          if (img.naturalWidth) {
+            const s = Math.max(iw / img.naturalWidth, ih / img.naturalHeight);
+            const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+            ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+          }
+          // Inner vignette: a shadow cast inward by a frame around the photo.
+          ctx.shadowColor = "rgba(0, 0, 0, 0.08)";
+          ctx.shadowBlur = lerp(1, 4, k) * dpr;
+          ctx.beginPath();
+          ctx.rect(-iw / 2 - 100, -ih / 2 - 100, iw + 200, ih + 200);
+          ctx.rect(-iw / 2, -ih / 2, iw, ih);
+          ctx.fillStyle = "#000";
+          ctx.fill("evenodd");
+          ctx.restore();
+        }
+
+        function shade(el, r, k) {
+          const s = el.style;
+          s.width = r.w + "px";
+          s.height = r.h + "px";
+          s.transform = `translate(${r.x}px, ${r.y}px) rotate(${r.rot}rad)`;
+          s.boxShadow = `0 ${lerp(1.5, 5.833, k)}px ${lerp(2, 8.75, k)}px ${lerp(-0.25, -2.917, k)}px rgba(0, 0, 0, ${lerp(0.18, 0.25, k)})`;
+        }
+
+        // Draws the photo flying from -> to on a full-viewport canvas. `to` may be mutated mid-flight
+        // to retarget. Resolves on the last frame, which stays painted until fadeAway().
+        function fly(from, to, img, opening, onFirstFrame) {
+          const canvas = Object.assign(document.createElement("canvas"), { className: "morph-canvas" });
+          const shadow = Object.assign(document.createElement("div"), { className: "morph-shadow" });
+          canvas.setAttribute("aria-hidden", "true");
+          shadow.setAttribute("aria-hidden", "true");
+          document.body.append(shadow, canvas);
+          const dpr = Math.min(devicePixelRatio || 1, 2);
+          canvas.width = Math.round(innerWidth * dpr);
+          canvas.height = Math.round(innerHeight * dpr);
+          const ctx = canvas.getContext("2d");
+          const dur = DURATION * speed();
+          let t0 = 0;
+          return new Promise((resolve) => {
+            const frame = (now) => {
+              if (!t0) { t0 = now; onFirstFrame?.(); }
+              const p = Math.min(1, (now - t0) / dur);
+              const pR = E_ROT(p), pS = opening ? E_SIZE(p) : pR;
+              const w = lerp(from.w, to.w, pS), h = lerp(from.h, to.h, pS);
+              const cx = lerp(from.x + from.w / 2, to.x + to.w / 2, E_X(p));
+              const cy = lerp(from.y + from.h / 2, to.y + to.h / 2, E_Y(p));
+              const r = { x: cx - w / 2, y: cy - h / 2, w, h, rot: lerp(from.rot, to.rot, pR), b: lerp(from.b, to.b, pR) };
+              const k = opening ? pR : 1 - pR;
+              paint(ctx, dpr, r, img, k);
+              shade(shadow, r, k);
+              if (p < 1) requestAnimationFrame(frame);
+              else resolve({ canvas, shadow });
+            };
+            requestAnimationFrame(frame);
+          });
+        }
+
+        function fadeAway({ canvas, shadow }, then) {
+          canvas.style.transition = "opacity 150ms ease-out";
+          canvas.style.opacity = "0";
+          setTimeout(() => { canvas.remove(); shadow.remove(); then?.(); }, 160);
+        }
+
+        function tuck(link, top, on) {
+          link.querySelectorAll(".image-stack-card").forEach((c) => {
+            c.getAnimations().forEach((a) => a.id === "stack-tuck" && a.cancel());
+            if (!on || c === top) return;
+            const i = parseFloat(c.style.getPropertyValue("--stack-index")) || 0;
+            c.animate(
+              [{ transform: getComputedStyle(c).transform }, { transform: `translate(${i * 9}px, ${i * -3}px) rotate(${(i - 1) * 4}deg)` }],
+              { id: "stack-tuck", duration: 350 * speed(), easing: "cubic-bezier(0.34, 1.4, 0.64, 1)", fill: "forwards" }
+            );
+          });
+        }
+
+        let st = null;
+
+        async function open(link, path, push = true) {
+          const card = topCard(link);
+          const img = card?.querySelector("img");
+          const shell = document.querySelector("[data-route-shell]");
+          if (!card || !img?.naturalWidth || !shell) return false;
+
+          const s = (st = { path, base: clean(location.href), title: document.title, link, card, shell, phase: "opening" });
+          const page = load(path);
+          const to = heroTarget();
+          const flight = fly(cardRect(card), to, img, true, () => (card.style.visibility = "hidden"));
+          tuck(link, card, true);
+          root.classList.add("overlay-open");
+          shell.classList.add("blur-locked");
+          s.shellAnim = shell.animate(
+            [
+              { opacity: 1, filter: "blur(0px)" },
+              { opacity: 0.4, filter: "blur(6px)", offset: 0.55 },
+              { opacity: 0, filter: "blur(6px)" }
+            ],
+            { duration: 470 * speed(), delay: 60 * speed(), easing: "cubic-bezier(0.25, 0.1, 0.25, 1)", fill: "forwards" }
+          );
+          if (push) history.pushState({ ...history.state, overlay: path }, "", path);
+
+          let doc;
+          try {
+            [doc] = await Promise.all([page, wait(200)]);
+          } catch {
+            location.assign(path);
+            return true;
+          }
+          if (st !== s) return true;
+          mount(s, doc, to);
+          // If the fetch outlived the flight, the canvas has been parked on its last frame.
+          land(s, await flight);
+          return true;
+        }
+
+        function mount(s, doc, to) {
+          const src = doc.querySelector("[data-route-shell]");
+          s.backdrop = Object.assign(document.createElement("div"), { className: "detail-overlay-backdrop" });
+          s.overlay = Object.assign(document.createElement("div"), { className: "detail-overlay" });
+          s.overlay.setAttribute("role", "dialog");
+          s.overlay.setAttribute("aria-modal", "true");
+          s.overlay.setAttribute("aria-label", doc.title);
+          s.overlay.innerHTML = `<div class="detail-shell">${src ? src.innerHTML : ""}</div>`;
+          document.body.append(s.backdrop, s.overlay);
+          document.title = doc.title;
+          s.backdrop.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400 * speed(), easing: "ease-out", fill: "forwards" });
+
+          s.hero = s.overlay.querySelector(".detail-hero");
+          s.heroImg = s.hero?.querySelector("img");
+          s.early = s.overlay.querySelectorAll(".detail-kicker, .detail-header h1");
+          s.late = s.overlay.querySelectorAll(".detail-meta, .detail-divider, .detail-body");
+          [...s.early, ...s.late].forEach((el) => (el.style.opacity = "0"));
+          if (s.hero) {
+            s.hero.style.visibility = "hidden";
+            s.hero.style.boxShadow = "none";
+            const r = s.hero.getBoundingClientRect();
+            Object.assign(to, { x: r.left, y: r.top, w: r.width, h: r.height });
+          }
+        }
+
+        function land(s, flight) {
+          if (st !== s) return fadeAway(flight);
+          if (s.hero) s.hero.style.visibility = "";
+          fadeAway(flight, () => s.hero && (s.hero.style.boxShadow = ""));
+          const reveal = (els, delay) => els.forEach((el) =>
+            el.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)" }],
+              { duration: 500 * speed(), delay: delay * speed(), easing: REVEAL_EASE, fill: "both" }));
+          reveal(s.early, 250);
+          reveal(s.late, 400);
+          [...s.early, ...s.late].forEach((el) => (el.style.opacity = ""));
+          s.overlay.querySelector(".back-chevron")?.focus({ preventScroll: true });
+          s.phase = "open";
+          if (s.pendingClose) close();
+        }
+
+        async function close() {
+          const s = st;
+          if (!s) return;
+          if (s.phase !== "open") { s.pendingClose = true; return; }
+          s.phase = "closing";
+          s.overlay.style.pointerEvents = "none";
+          const out = [{ opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(6px)" }];
+          s.overlay.querySelectorAll(".detail-header, .detail-divider, .detail-body, .back-chevron")
+            .forEach((el) => el.animate(out, { duration: 150 * speed(), easing: "ease-in", fill: "forwards" }));
+          await wait(150);
+          if (st !== s) return;
+
+          const ease = "cubic-bezier(0.22, 1, 0.36, 1)";
+          s.shell.classList.remove("blur-locked");
+          s.shellAnim.cancel();
+          s.shell.animate([{ opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)" }], { duration: 450 * speed(), easing: ease });
+          s.backdrop.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 450 * speed(), easing: ease, fill: "forwards" });
+
+          const done = () => {
+            s.card.style.visibility = "";
+            tuck(s.link, s.card, false);
+            s.overlay.remove();
+            s.backdrop.remove();
+            root.classList.remove("overlay-open");
+            document.title = s.title;
+            s.link.focus({ preventScroll: true });
+            st = null;
+          };
+          if (!s.hero || !s.heroImg) return done();
+          const h = s.hero.getBoundingClientRect();
+          const flight = await fly(
+            { x: h.left, y: h.top, w: h.width, h: h.height, rot: 0, b: 14.5 },
+            cardRect(s.card), s.heroImg, false,
+            () => (s.overlay.firstElementChild.style.display = "none")
+          );
+          done();
+          fadeAway(flight);
+        }
+
+        const requestClose = () => (history.state?.overlay ? history.back() : close());
+
+        document.addEventListener("click", (e) => {
+          if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          if (st) {
+            if (e.target === st.overlay || e.target.closest?.(".detail-overlay .back-chevron")) {
+              e.preventDefault();
+              requestClose();
+            }
+            return;
+          }
+          if (reduced.matches) return;
+          const link = e.target.closest?.("a.has-image-stack");
+          if (!link || !isWork(clean(link.href))) return;
+          const img = topCard(link)?.querySelector("img");
+          if (!img?.naturalWidth) return;
+          e.preventDefault();
+          open(link, clean(link.href));
+        }, { capture: true });
+
+        // Registered before ClientRouter's module runs, so this can stop it from swapping pages.
+        window.addEventListener("popstate", (e) => {
+          if (st) {
+            if (clean(location.href) === st.base) {
+              e.stopImmediatePropagation();
+              close();
+            }
+            return;
+          }
+          const path = history.state?.overlay;
+          const link = path && !reduced.matches && stackLink(path);
+          if (link) {
+            e.stopImmediatePropagation();
+            open(link, path, false);
+          }
+        }, { capture: true });
+
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && st) requestClose();
+        });
+
+        const warm = (e) => {
+          const link = e.target.closest?.("a.has-image-stack");
+          if (link && isWork(clean(link.href))) load(clean(link.href)).catch(() => {});
+        };
+        document.addEventListener("pointerover", warm, { passive: true });
+        document.addEventListener("focusin", warm);
+
+        // A real navigation from inside the overlay replaces the whole body.
+        document.addEventListener("astro:before-swap", () => {
+          st = null;
+          root.classList.remove("overlay-open");
+        });
+      })();
+    </script>
   </body>
 </html>
