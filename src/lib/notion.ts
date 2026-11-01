@@ -167,6 +167,19 @@ function normalizeBlocks(blocks: BlockObjectResponse[]): DetailBlock[] {
       continue;
     }
 
+    if (block.type === "code") {
+      const code = block.code.rich_text.map((part) => part.plain_text).join("").trimEnd();
+      if (!code) continue;
+      const caption = richTextToText(block.code.caption);
+      normalized.push({
+        type: "code",
+        code,
+        language: block.code.language === "plain text" ? "plaintext" : block.code.language,
+        caption: caption || undefined
+      });
+      continue;
+    }
+
     if (block.type === "image") {
       const src = readImageAssetUrl(block.image);
       if (!src) continue;

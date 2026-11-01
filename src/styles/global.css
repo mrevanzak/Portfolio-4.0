@@ -504,9 +504,28 @@ h1 {
   background: linear-gradient(to right, var(--divider), transparent);
 }
 
-.detail-figure {
+.detail-figure,
+.detail-code {
   display: grid;
   gap: 8px;
+  min-width: 0;
+}
+
+/* Shiki paints its own background; swap it for a tint of the page so code sits in the palette. */
+.detail-code pre.astro-code {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background-color: color-mix(in oklch, var(--primary) 7%, var(--surface)) !important;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+@media (prefers-color-scheme: dark) {
+  .detail-code pre.astro-code,
+  .detail-code pre.astro-code span {
+    color: var(--shiki-dark) !important;
+  }
 }
 
 .detail-figure img {
@@ -516,7 +535,8 @@ h1 {
   box-shadow: 0 16px 42px color-mix(in oklch, var(--shadow), transparent 25%);
 }
 
-.detail-figure figcaption {
+.detail-figure figcaption,
+.detail-code figcaption {
   font-size: 12px;
   line-height: 1.45;
 }
