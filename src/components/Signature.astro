@@ -19,12 +19,12 @@ const strokes = [
   document.addEventListener("astro:page-load", () => {
     const paths = [...document.querySelectorAll<SVGPathElement>("[data-signature] path")];
     if (!paths.length) return;
-    const instant = played || matchMedia("(prefers-reduced-motion: reduce)").matches;
-    played = true;
-    if (instant) {
+    // Draws even with reduced motion on: a stroke revealing in place doesn't move anything across the screen.
+    if (played) {
       paths.forEach((p) => (p.style.strokeDashoffset = "0"));
       return;
     }
+    played = true;
 
     const lift = 18; // pen-lift pause between strokes, in path units
     const lengths = paths.map((p) => p.getTotalLength());
@@ -52,7 +52,7 @@ const strokes = [
   .signature {
     display: block;
     width: auto;
-    height: 44px;
+    height: 64px;
     overflow: visible;
     color: var(--heading);
   }
@@ -60,7 +60,7 @@ const strokes = [
   .signature path {
     fill: none;
     stroke: currentColor;
-    stroke-width: 13;
+    stroke-width: 20;
     stroke-linecap: round;
     stroke-linejoin: round;
     /* Just over 1 so no seam shows once drawn; hidden until the script draws it. */

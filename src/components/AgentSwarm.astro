@@ -1,0 +1,532 @@
+---
+// Easter egg: type "agent" (or triple-tap the signature, or open with ?agents) and a swarm of
+// AI cursors rebuilds the page block by block. Inspired by Joel Califa's Swarm; written from scratch.
+---
+
+<div class="swarm-log" data-swarm-log hidden>
+  <div class="swarm-log-head">
+    <span>agent mode</span>
+    <button type="button" data-swarm-exit aria-label="Exit agent mode">esc</button>
+  </div>
+  <ol data-swarm-lines aria-live="polite"></ol>
+</div>
+
+<div class="swarm-keys" data-swarm-keys aria-hidden="true">
+  {[..."agent"].map((char, i) => <span class="swarm-key" style={`--i: ${i}`}>{char}</span>)}
+</div>
+
+<style is:global>
+  .swarm-pending {
+    visibility: hidden !important;
+  }
+
+  .swarm-cursor {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9000;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .swarm-cursor svg {
+    display: block;
+    filter: drop-shadow(0 2px 3px #0005);
+  }
+
+  .swarm-cursor b {
+    position: absolute;
+    top: 17px;
+    left: 14px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--agent);
+    color: var(--agent-ink, #fff);
+    font: 800 11px/1.5 Figtree, system-ui, sans-serif;
+    white-space: nowrap;
+  }
+
+  .swarm-marquee {
+    position: fixed;
+    z-index: 8999;
+    pointer-events: none;
+    border: 1.5px solid var(--agent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--agent), transparent 88%);
+  }
+
+  .swarm-marquee span {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--agent);
+    color: var(--agent-ink, #fff);
+    font: 700 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+
+  .swarm-log {
+    position: fixed;
+    bottom: 18px;
+    left: 18px;
+    z-index: 9001;
+    width: min(300px, calc(100vw - 36px));
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: #07093a;
+    box-shadow: 0 18px 50px #00000059;
+    color: #c9d0ff;
+    font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-transform: none;
+  }
+
+  .swarm-log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    color: var(--accent);
+    font: 800 13px/1.2 Figtree, system-ui, sans-serif;
+  }
+
+  .swarm-log-head button {
+    padding: 3px 9px;
+    border: 0;
+    border-radius: 999px;
+    background: #ffffff1f;
+    color: #fff;
+    font: 700 11px/1.4 Figtree, system-ui, sans-serif;
+    cursor: pointer;
+  }
+
+  .swarm-log ol {
+    display: grid;
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .swarm-log li b {
+    color: var(--agent);
+  }
+
+  /* Keycap HUD: pops up on the first "a", lights a key per correct letter, shakes on a miss. */
+  .swarm-keys {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    z-index: 9002;
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 18px;
+    background: #07093a;
+    box-shadow: 0 18px 50px #00000066;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 24px) scale(0.86);
+    transition:
+      opacity 180ms var(--ease-out-quint),
+      transform 460ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .swarm-keys[data-open] {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  .swarm-keys[data-launch] {
+    opacity: 0;
+    transform: translate(-50%, -18px) scale(1.25);
+    transition:
+      opacity 260ms ease-in,
+      transform 320ms ease-in;
+  }
+
+  .swarm-keys[data-fail] {
+    animation: swarm-keys-shake 380ms ease-out;
+  }
+
+  .swarm-key {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 40px;
+    border-radius: 11px;
+    background: #ffffff12;
+    box-shadow: inset 0 -3px 0 #00000059;
+    color: #ffffff38;
+    font: 800 19px/1 Figtree, system-ui, sans-serif;
+    transition:
+      background-color 160ms var(--ease-out-quint),
+      color 160ms var(--ease-out-quint);
+  }
+
+  .swarm-key[data-on] {
+    background: var(--accent);
+    box-shadow: inset 0 -3px 0 #a3b21c;
+    color: #14168a;
+    animation: swarm-key-pop 440ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .swarm-keys[data-fail] .swarm-key[data-on] {
+    background: #ff5a36;
+    box-shadow: inset 0 -3px 0 #b33a1f;
+    color: #fff;
+  }
+
+  .swarm-keys[data-done] .swarm-key {
+    animation: swarm-key-jump 520ms cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--i) * 55ms) both;
+  }
+
+  @keyframes swarm-key-pop {
+    0% {
+      transform: translateY(8px) scale(0.6);
+    }
+    55% {
+      transform: translateY(-7px) scale(1.15) rotate(var(--tilt, -6deg));
+    }
+  }
+
+  @keyframes swarm-key-jump {
+    40% {
+      transform: translateY(-16px) rotate(-8deg) scale(1.08);
+    }
+  }
+
+  @keyframes swarm-keys-shake {
+    20% {
+      translate: -9px 0;
+    }
+    40% {
+      translate: 8px 0;
+    }
+    60% {
+      translate: -5px 0;
+    }
+    80% {
+      translate: 3px 0;
+    }
+  }
+
+  /* Reduced motion: the HUD fades in place and keys light up without popping. */
+  @media (prefers-reduced-motion: reduce) {
+    .swarm-keys,
+    .swarm-keys[data-open],
+    .swarm-keys[data-launch] {
+      transform: translate(-50%, 0);
+      transition: opacity 160ms ease-out;
+    }
+    .swarm-keys[data-fail],
+    .swarm-key[data-on],
+    .swarm-keys[data-done] .swarm-key {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  const AGENTS: [name: string, color: string, ink?: string][] = [
+    ["claude", "#d97757"],
+    ["codex", "#10a37f"],
+    ["cursor", "#e6f83a", "#14168a"],
+    ["devin", "#a78bfa"],
+    ["gemini", "#38bdf8", "#04213a"]
+  ];
+  // Everything on screen that reads as one piece; the swarm builds them top-down.
+  const BLOCKS =
+    ".intro-topline, h1, .lede, .entry-divider, h2, .page-list > li, .back-chevron, .detail-hero, .detail-header, .detail-meta, .detail-block";
+
+  // Page aware: an open detail overlay wins over the list page sitting blurred behind it.
+  function currentPage() {
+    const overlay = document.querySelector<HTMLElement>(".detail-overlay .detail-shell");
+    const scope = overlay ?? document.querySelector<HTMLElement>("[data-route-shell]");
+    const title = document.title.split(" — ")[0].toLowerCase();
+    return { scope, name: title === "rev" ? "rev's home" : title };
+  }
+
+  type Agent = { el: HTMLElement; name: string; color: string; ink: string; x: number; y: number; tx: number; ty: number; angle: number; flock: boolean };
+
+  // Queried on use: the page swap replaces this markup on every navigation.
+  const getLog = () => document.querySelector<HTMLElement>("[data-swarm-log]");
+  const getLines = () => document.querySelector<HTMLElement>("[data-swarm-lines]");
+  const mouse = { x: innerWidth / 2, y: innerHeight / 2 };
+  let running = false;
+  let agents: Agent[] = [];
+  let raf = 0;
+
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  // Build pacing: 1 was a blur; higher is slower and easier to watch.
+  const PACE = 2;
+
+  function say(agent: { name: string; color: string }, text: string) {
+    const lines = getLines();
+    if (!lines) return;
+    const line = document.createElement("li");
+    line.style.setProperty("--agent", agent.color);
+    line.append(Object.assign(document.createElement("b"), { textContent: agent.name }), ` ${text}`);
+    lines.prepend(line);
+    while (lines.children.length > 5) lines.lastElementChild?.remove();
+  }
+
+  function spawn([name, color, ink = "#fff"]: (typeof AGENTS)[number], i: number, origin?: { x: number; y: number }): Agent {
+    const el = document.createElement("div");
+    el.className = "swarm-cursor";
+    el.style.setProperty("--agent", color);
+    el.style.setProperty("--agent-ink", ink);
+    el.innerHTML = `<svg width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path d="M1.5 1.5 16 8.4l-6.3 2-2.6 6.4z" fill="${color}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg><b></b>`;
+    el.querySelector("b")!.textContent = name;
+    document.body.append(el);
+    const angle = (i / AGENTS.length) * Math.PI * 2;
+    if (origin) {
+      // Burst: everyone starts on the keycaps and fans out before heading to work.
+      const tx = origin.x + Math.cos(angle) * 110;
+      const ty = origin.y + Math.sin(angle) * 70 - 40;
+      return { el, name, color, ink, x: origin.x, y: origin.y, tx, ty, angle, flock: false };
+    }
+    const x = innerWidth * (0.15 + 0.17 * i);
+    return { el, name, color, ink, x, y: -40, tx: x, ty: -40, angle, flock: false };
+  }
+
+  function tick(time: number) {
+    for (const agent of agents) {
+      if (agent.flock) {
+        agent.angle += 0.01;
+        agent.tx = mouse.x + Math.cos(agent.angle + time / 1000) * 52;
+        agent.ty = mouse.y + Math.sin(agent.angle + time / 1000) * 52;
+      }
+      agent.x += (agent.tx - agent.x) * 0.1;
+      agent.y += (agent.ty - agent.y) * 0.1;
+      agent.el.style.transform = `translate(${agent.x}px, ${agent.y}px)`;
+    }
+    raf = requestAnimationFrame(tick);
+  }
+
+  function blockLabel(block: HTMLElement) {
+    const text = (block.innerText || block.getAttribute("aria-label") || "").trim().split("\n")[0].toLowerCase();
+    return text.slice(0, 26) || "image";
+  }
+
+  // The visitor scrolling takes priority; the swarm only follows along while they're hands-off.
+  let lastUserScroll = 0;
+  const markUserScroll = () => (lastUserScroll = performance.now());
+  addEventListener("wheel", markUserScroll, { passive: true });
+  addEventListener("touchmove", markUserScroll, { passive: true });
+
+  function follow(block: HTMLElement) {
+    if (performance.now() - lastUserScroll < 1500) return;
+    const rect = block.getBoundingClientRect();
+    // Only ever follow downward: blocks above the starting point get built quietly off-screen.
+    if (rect.top > 0 && rect.bottom > innerHeight * 0.85) {
+      block.scrollIntoView({ behavior: "smooth", block: rect.height > innerHeight * 0.6 ? "start" : "center" });
+    }
+  }
+
+  async function build(agent: Agent, block: HTMLElement) {
+    follow(block);
+    // Rects are re-read every step, so scrolling mid-build keeps cursor and box glued to the block.
+    for (let step = 0; step < 8 && running; step++) {
+      const rect = block.getBoundingClientRect();
+      agent.tx = rect.left;
+      agent.ty = rect.top;
+      await sleep(40 * PACE);
+    }
+    if (!running) return;
+
+    const marquee = document.createElement("div");
+    marquee.className = "swarm-marquee";
+    marquee.style.setProperty("--agent", agent.color);
+    marquee.style.setProperty("--agent-ink", agent.ink);
+    const size = document.createElement("span");
+    marquee.append(size);
+    document.body.append(marquee);
+
+    const steps = 16;
+    for (let step = 1; step <= steps && running; step++) {
+      const rect = block.getBoundingClientRect();
+      const w = (rect.width * step) / steps;
+      const h = (rect.height * step) / steps;
+      Object.assign(marquee.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${w}px`, height: `${h}px` });
+      size.textContent = `${Math.round(w)} × ${Math.round(h)}`;
+      agent.tx = rect.left + w;
+      agent.ty = rect.top + h;
+      await sleep(26 * PACE);
+    }
+
+    block.classList.remove("swarm-pending");
+    block.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)" }], { duration: 380, easing: "ease-out" });
+    say(agent, `placed ${blockLabel(block)}`);
+    await sleep(140 * PACE);
+    marquee.remove();
+  }
+
+  async function start(origin?: { x: number; y: number }) {
+    if (running) return stop();
+    const page = currentPage();
+    // The whole page, top to bottom, starting from what's on screen so the first boxes land in view.
+    const all = [...(page.scope?.querySelectorAll<HTMLElement>(BLOCKS) ?? [])].filter((block) => block.checkVisibility());
+    const firstInView = Math.max(0, all.findIndex((block) => block.getBoundingClientRect().bottom > 0));
+    const blocks = [...all.slice(firstInView), ...all.slice(0, firstInView)];
+    const log = getLog();
+    const lines = getLines();
+    if (!blocks.length || !log || !lines) return;
+
+    running = true;
+    lines.replaceChildren();
+    log.hidden = false;
+    const swarm = { name: "swarm", color: "#e6f83a" };
+
+    // Reduced motion: no flying cursors or drawn boxes; blocks just fade back in, one by one, as the log fills.
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      blocks.forEach((block) => block.classList.add("swarm-pending"));
+      say(swarm, `wiping ${page.name}. rebuilding…`);
+      await sleep(300);
+      for (const [i, block] of blocks.entries()) {
+        if (!running) return;
+        const agent = AGENTS[i % AGENTS.length];
+        block.classList.remove("swarm-pending");
+        block.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: "ease-out" });
+        say({ name: agent[0], color: agent[1] }, `placed ${blockLabel(block)}`);
+        await sleep(120 * PACE);
+      }
+      say(swarm, `${page.name} rebuilt. esc to go live`);
+      return;
+    }
+
+    blocks.forEach((block) => block.classList.add("swarm-pending"));
+    agents = AGENTS.map((agent, i) => spawn(agent, i, origin));
+    raf = requestAnimationFrame(tick);
+    say(swarm, `wiping ${page.name}. rebuilding…`);
+
+    const queue = [...blocks];
+    await Promise.all(
+      agents.map(async (agent, i) => {
+        await sleep((200 + i * 140) * PACE);
+        while (running && queue.length) await build(agent, queue.shift()!);
+      })
+    );
+    if (!running) return;
+    say(swarm, `${page.name} rebuilt. esc to go live`);
+    agents.forEach((agent) => (agent.flock = true));
+  }
+
+  function stop() {
+    if (!running) return;
+    running = false;
+    cancelAnimationFrame(raf);
+    agents.forEach((agent) => agent.el.remove());
+    agents = [];
+    document.querySelectorAll(".swarm-marquee").forEach((marquee) => marquee.remove());
+    document.querySelectorAll(".swarm-pending").forEach((block) => block.classList.remove("swarm-pending"));
+    const log = getLog();
+    if (log) log.hidden = true;
+  }
+
+  addEventListener("pointermove", (event) => {
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+  });
+
+  const WORD = "agent";
+  let progress = 0;
+  let idleTimer = 0;
+  const getKeys = () => document.querySelector<HTMLElement>("[data-swarm-keys]");
+
+  function resetKeys(delay = 0) {
+    window.clearTimeout(idleTimer);
+    idleTimer = window.setTimeout(() => {
+      const keys = getKeys();
+      progress = 0;
+      keys?.removeAttribute("data-open");
+      // Clear the caps once the HUD has slid away, so it never visibly empties.
+      window.setTimeout(() => {
+        if (progress) return;
+        keys?.removeAttribute("data-fail");
+        keys?.removeAttribute("data-done");
+        keys?.removeAttribute("data-launch");
+        keys?.querySelectorAll("[data-on]").forEach((key) => key.removeAttribute("data-on"));
+      }, 300);
+    }, delay);
+  }
+
+  function pressKey(index: number) {
+    const keys = getKeys();
+    const key = keys?.children[index] as HTMLElement | undefined;
+    if (!keys || !key) return;
+    keys.removeAttribute("data-fail");
+    keys.removeAttribute("data-launch");
+    keys.setAttribute("data-open", "");
+    key.style.setProperty("--tilt", `${(Math.random() * 14 - 7).toFixed(1)}deg`);
+    key.setAttribute("data-on", "");
+    resetKeys(1800);
+  }
+
+  function missKey() {
+    const keys = getKeys();
+    if (!keys) return;
+    keys.removeAttribute("data-fail");
+    void keys.offsetWidth; // restart the shake if it is already playing
+    keys.setAttribute("data-fail", "");
+    progress = 0;
+    resetKeys(420);
+  }
+
+  async function launch() {
+    const keys = getKeys();
+    window.clearTimeout(idleTimer);
+    keys?.setAttribute("data-done", "");
+    await sleep(560);
+    const rect = keys?.getBoundingClientRect();
+    keys?.setAttribute("data-launch", "");
+    start(rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : undefined);
+    resetKeys(400);
+  }
+
+  addEventListener("keydown", (event) => {
+    if (event.key === "Escape") return stop();
+    const target = event.target as HTMLElement | null;
+    if (target?.closest?.("input, textarea, [contenteditable]") || event.key.length !== 1) return;
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    const key = event.key.toLowerCase();
+
+    if (key === WORD[progress]) {
+      pressKey(progress);
+      progress++;
+      if (progress === WORD.length) {
+        progress = 0;
+        launch();
+      }
+    } else if (progress > 0) {
+      missKey();
+    }
+  });
+
+  // Phones have no keyboard: three quick taps on the signature start it.
+  let taps: number[] = [];
+  document.addEventListener("pointerdown", (event) => {
+    if (!(event.target as Element | null)?.closest?.(".signature")) return;
+    const now = performance.now();
+    taps = [...taps.filter((t) => now - t < 700), now];
+    if (taps.length >= 3) {
+      taps = [];
+      start();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if ((event.target as Element | null)?.closest?.("[data-swarm-exit]")) stop();
+  });
+  document.addEventListener("astro:before-swap", stop);
+  // The only hint, for whoever opens devtools. Module scripts run once, so this logs once per visit.
+  console.log(
+    "%cpsst. type %cagent%c anywhere on the page.",
+    "font: 700 13px Figtree, system-ui, sans-serif; color: #2a2fe8",
+    "font: 800 13px Figtree, system-ui, sans-serif; color: #14168a; background: #e6f83a; padding: 1px 6px; border-radius: 999px",
+    "font: 700 13px Figtree, system-ui, sans-serif; color: #2a2fe8"
+  );
+  if (new URLSearchParams(location.search).has("agents")) setTimeout(start, 1600);
+</script>

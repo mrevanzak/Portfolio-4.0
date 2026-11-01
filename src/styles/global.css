@@ -3,14 +3,21 @@
 @import "tailwindcss/utilities.css" layer(utilities);
 
 :root {
-  color-scheme: light dark;
-  --surface: #faf6f2;
-  --primary: #73574a;
-  --secondary: #73574abf;
-  --heading: #432818;
-  --divider: #73574a14;
-  --pill-bg: #fffdfa;
-  --shadow: #43281824;
+  color-scheme: dark;
+  --dark: 0;
+  --surface: #2a2fe8;
+  --primary: #e4e7ff;
+  --secondary: #b4bcff;
+  --heading: #ffffff;
+  --accent: #e6f83a;
+  --divider: #ffffff29;
+  --pill-bg: #ffffff;
+  --shadow: #0a0c6b66;
+  --glow: #5179ff;
+  --wash: #3138f5;
+  --sky:
+    radial-gradient(ellipse 46rem 30rem at 50% 14rem, var(--glow), transparent 70%),
+    linear-gradient(180deg, var(--wash), transparent 60rem);
   --hover-blur: 2.7px;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
@@ -38,16 +45,90 @@
   --speed: 8;
 }
 
+/* Registered so the theme toggle can cross-fade every colour (gradients included) instead of snapping. */
+@property --surface {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --primary {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --secondary {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --divider {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --shadow {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --glow {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --wash {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --dark {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+:root[data-theme-switching] {
+  transition:
+    --surface 600ms var(--ease-out-quint),
+    --primary 600ms var(--ease-out-quint),
+    --secondary 600ms var(--ease-out-quint),
+    --divider 600ms var(--ease-out-quint),
+    --shadow 600ms var(--ease-out-quint),
+    --glow 600ms var(--ease-out-quint),
+    --wash 600ms var(--ease-out-quint),
+    --dark 600ms var(--ease-out-quint);
+}
+
+/* Night follows the system unless the toggle pinned a theme (data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --surface: #1c1917;
-    --primary: #9a918a;
-    --secondary: #9a918abf;
-    --heading: #fef1df;
-    --divider: #e8e4da14;
-    --pill-bg: #1d1917;
-    --shadow: #fef1df1f;
+  :root:not([data-theme="light"]) {
+    --dark: 1;
+    --surface: #0d0f4d;
+    --primary: #d6daff;
+    --secondary: #9aa3f0;
+    --divider: #ffffff1f;
+    --shadow: #00000080;
+    --glow: #2a2fe8a6;
+    --wash: #3138f500;
   }
+}
+
+:root[data-theme="dark"] {
+  --dark: 1;
+  --surface: #0d0f4d;
+  --primary: #d6daff;
+  --secondary: #9aa3f0;
+  --divider: #ffffff1f;
+  --shadow: #00000080;
+  --glow: #2a2fe8a6;
+  --wash: #3138f500;
 }
 
 * {
@@ -59,16 +140,17 @@ html {
   background: var(--surface);
   color: var(--primary);
   font-family:
-    Inter,
+    Figtree,
     ui-sans-serif,
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  font-size: 14px;
-  line-height: 1.57;
-  letter-spacing: -0.02em;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: "liga" 0;
@@ -77,13 +159,16 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(
-      circle at 50% -20%,
-      color-mix(in oklch, var(--heading), transparent 92%),
-      transparent 34rem
-    ),
-    var(--surface);
+  background: var(--sky), var(--surface);
+}
+
+/* White pills carry their own cobalt ink, like GO Club's "+ Add" buttons. */
+.back-chevron,
+.pill-button {
+  --heading: #14168a;
+  --primary: #2a2fe8;
+  --secondary: #4a4fd0;
+  --divider: transparent;
 }
 
 a {
@@ -92,7 +177,8 @@ a {
 }
 
 ::selection {
-  background: color-mix(in oklch, var(--heading), transparent 82%);
+  background: var(--accent);
+  color: #14168a;
 }
 
 .page-shell {
@@ -186,10 +272,13 @@ a {
   transform: translateX(-2px);
 }
 
+/* Same spot as the index pages' chevron, so opening a detail over /work hands off in place. */
 .back-chevron[data-back-mode="detail"] {
-  top: 94.5px;
-  left: max(20px, calc(50% - 323px));
   animation: back-chevron-pop 420ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.detail-overlay[data-keep-back] .back-chevron {
+  animation: none;
 }
 
 @keyframes back-chevron-pop {
@@ -232,92 +321,188 @@ h2,
 
 .kicker {
   margin: 0 0 1px;
-  font-size: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: lowercase;
 }
 
+/* GO Club stat widget: avatar in a status ring, a big live number, a small label. */
+/* Avatar sits on the right edge and text grows leftward, so loading → loaded never moves the ring. */
 .discord-status {
+  --status-color: var(--secondary);
   display: inline-flex;
+  flex-direction: row-reverse;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
-  max-width: min(340px, 58vw);
-  padding: 8px 15px 8px 13px;
-  border: 1px solid var(--divider);
-  border-radius: 999px;
-  background: color-mix(in oklch, var(--pill-bg), transparent 18%);
-  box-shadow: 0 10px 30px color-mix(in oklch, var(--shadow), transparent 34%);
+  max-width: min(320px, 58vw);
   color: var(--secondary);
-  font-size: 12px;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
+  text-transform: lowercase;
   outline: none;
-  transition:
-    color 180ms var(--ease-out-quint),
-    border-color 180ms var(--ease-out-quint),
-    box-shadow 180ms var(--ease-out-quint),
-    transform 180ms var(--ease-out-quint);
+  transition: transform 180ms var(--ease-out-quint);
+}
+
+.discord-status[data-status="online"] {
+  --status-color: #4ade80;
+}
+.discord-status[data-status="idle"] {
+  --status-color: #facc15;
+}
+.discord-status[data-status="dnd"] {
+  --status-color: #ff5a36;
+}
+
+.status-ring {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 0 2.5px var(--surface),
+    0 0 0 5px var(--status-color);
 }
 
 .discord-mark {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   color: #5865f2;
+}
+
+/* Online: a soft ripple says "live". */
+.status-ring::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 2px solid var(--status-color);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.discord-status[data-status="online"] .status-ring::after {
+  animation: status-ping 3s var(--ease-out-quint) infinite;
+}
+
+@keyframes status-ping {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+.status-ring {
+  transition:
+    box-shadow 220ms var(--ease-out-quint),
+    transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root:not(.hover-cold) .discord-status:hover .status-ring,
+.discord-status:focus-visible .status-ring {
+  transform: rotate(-8deg) scale(1.07);
+}
+
+.discord-status:active .status-ring {
+  transform: scale(0.9);
+  transition-duration: 120ms;
+}
+
+.discord-status[data-copied] {
+  --status-color: var(--accent);
+}
+
+.copy-badge {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2.5px var(--surface);
+  color: #14168a;
+  opacity: 0;
+  transform: scale(0.3) rotate(-30deg);
+  transition:
+    opacity 160ms var(--ease-out-quint),
+    transform 160ms var(--ease-out-quint);
+}
+
+.copy-badge svg {
+  width: 11px;
+  height: 11px;
+}
+
+.discord-status[data-copied] .copy-badge {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 120ms var(--ease-out-quint),
+    transform 420ms cubic-bezier(0.34, 1.7, 0.64, 1);
+}
+
+.status-stat,
+.status-copy {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.discord-avatar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .discord-copy {
   display: grid;
+  justify-items: end;
   gap: 3px;
   min-width: 0;
+  text-align: right;
 }
 
-.discord-label {
+.status-stat {
   color: var(--heading);
-  font-size: 10px;
-  font-weight: 650;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
-  letter-spacing: 0.045em;
-  text-transform: uppercase;
+  letter-spacing: -0.04em;
+  transition: color 180ms var(--ease-out-quint);
 }
 
 .status-copy {
   overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
-  line-height: 1.18;
-}
-
-.status-dot {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--secondary);
-  box-shadow: 0 0 0 3px color-mix(in oklch, var(--secondary), transparent 88%);
-}
-
-.discord-status[data-status="online"] .status-dot {
-  background: #3ba55d;
-  box-shadow: 0 0 0 3px color-mix(in oklch, #3ba55d, transparent 84%);
-}
-.discord-status[data-status="idle"] .status-dot {
-  background: #faa61a;
-  box-shadow: 0 0 0 3px color-mix(in oklch, #faa61a, transparent 84%);
-}
-.discord-status[data-status="dnd"] .status-dot {
-  background: #ed4245;
-  box-shadow: 0 0 0 3px color-mix(in oklch, #ed4245, transparent 86%);
-}
-.discord-status[data-status="offline"] .status-dot {
-  background: var(--secondary);
 }
 
 :root:not(.hover-cold) .discord-status:hover,
 .discord-status:focus-visible {
-  color: var(--heading);
-  border-color: color-mix(in oklch, var(--primary), transparent 72%);
-  box-shadow: 0 14px 34px color-mix(in oklch, var(--shadow), transparent 18%);
   transform: translateY(-1px);
+}
+
+:root:not(.hover-cold) .discord-status:hover .status-stat,
+.discord-status:focus-visible .status-stat {
+  color: var(--accent);
 }
 
 h1 {
@@ -330,8 +515,56 @@ h1 {
 }
 
 .lede {
-  max-width: 475px;
+  max-width: 540px;
   margin: 0;
+  text-wrap: balance;
+  font-size: clamp(20px, 4.4vw, 24px);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  text-transform: lowercase;
+}
+
+.accent {
+  color: var(--accent);
+}
+
+/* "careful motion" shows it: a springy letter wave once after the signature draws, and again on every hover. */
+.wave,
+.wave-word {
+  white-space: nowrap;
+}
+
+.wave-word {
+  display: inline-block;
+}
+
+/* The comma lives inside the last word's box so it can't wrap onto a line of its own. */
+.wave-tail {
+  color: var(--secondary);
+}
+
+.wave-char {
+  display: inline-block;
+  animation: wave-hop 720ms var(--stagger-ease) calc((1500ms + var(--i) * 32ms) * var(--speed)) both;
+}
+
+.wave:hover .wave-char {
+  animation:
+    wave-hop 720ms var(--stagger-ease) calc((1500ms + var(--i) * 32ms) * var(--speed)) both,
+    wave-hop-again 620ms var(--stagger-ease) calc(var(--i) * 28ms * var(--speed));
+}
+
+@keyframes wave-hop {
+  40% {
+    transform: translateY(-0.22em) rotate(-4deg);
+  }
+}
+
+@keyframes wave-hop-again {
+  40% {
+    transform: translateY(-0.22em) rotate(-4deg);
+  }
 }
 
 .content-index {
@@ -367,15 +600,18 @@ h1 {
 
 .detail-kicker {
   margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent);
+  text-transform: lowercase;
 }
 
 .detail-header h1 {
-  font-size: clamp(22px, 4vw, 30px);
-  line-height: 1.15;
+  font-size: clamp(34px, 7vw, 48px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-transform: lowercase;
 }
 
 .detail-hero {
@@ -426,6 +662,8 @@ h1 {
   margin: 0;
   max-width: 54ch;
   color: var(--secondary);
+  font-size: 17px;
+  font-weight: 600;
 }
 
 .detail-divider {
@@ -461,7 +699,12 @@ h1 {
 
 .detail-body p,
 .detail-body li,
-.detail-body blockquote,
+.detail-body blockquote {
+  color: var(--primary);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
 .detail-body figcaption {
   color: var(--secondary);
 }
@@ -469,14 +712,18 @@ h1 {
 .detail-body h2 {
   position: static;
   color: var(--heading);
-  font-size: 18px;
-  line-height: 1.28;
+  font-size: 26px;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
 }
 
 .detail-body h3 {
   color: var(--heading);
-  font-size: 16px;
-  line-height: 1.32;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  text-transform: lowercase;
 }
 
 .detail-list {
@@ -516,8 +763,8 @@ h1 {
   margin: 0;
   padding: 14px 0;
   border-radius: 12px;
-  background-color: color-mix(in oklch, var(--primary) 7%, var(--surface)) !important;
-  font-size: 12px;
+  background-color: color-mix(in oklch, #05062e 45%, var(--surface)) !important;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -582,11 +829,10 @@ h1 {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .detail-code pre.astro-code,
-  .detail-code pre.astro-code span {
-    color: var(--shiki-dark) !important;
-  }
+/* The page is always cobalt, so code always uses the dark palette. */
+.detail-code pre.astro-code,
+.detail-code pre.astro-code span {
+  color: var(--shiki-dark) !important;
 }
 
 .detail-figure img {
@@ -613,23 +859,26 @@ h2 {
   position: sticky;
   top: 26px;
   margin: 0;
-  font-size: 15px;
-  font-weight: 550;
+  color: var(--accent);
+  font-size: 18px;
+  font-weight: 800;
   line-height: 1.35;
   letter-spacing: -0.025em;
+  text-transform: lowercase;
 }
 
 .work-section-title {
   grid-column: 1 / -1;
   position: static;
-  margin: 0 0 -4px;
-  color: var(--heading);
-  font-size: 20px;
-  font-weight: 500;
-  line-height: 1.2;
-  letter-spacing: -0.03em;
-  font-style: italic;
-  text-transform: lowercase;
+  margin: 0 0 4px;
+  font-size: clamp(40px, 9vw, 52px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.work-section-title::after {
+  content: ".";
 }
 
 .page-list {
@@ -638,9 +887,11 @@ h2 {
   margin: -10px 0;
   padding: 0;
   list-style: none;
+  counter-reset: row;
 }
 
 .page-list li {
+  counter-increment: row;
   animation: fade-in-blur var(--stagger-duration) var(--stagger-ease) both;
   animation-delay: calc(
     var(--stagger-delay-base) + var(--stagger, 0) * var(--stagger-step)
@@ -690,31 +941,35 @@ h2 {
   align-self: center;
   color: var(--secondary);
   font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
   line-height: 1.35;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
   white-space: nowrap;
+  text-transform: lowercase;
 }
 
-.page-link::before {
-  content: "";
-  position: absolute;
-  inset: 5px -13px;
-  z-index: -1;
-  border-radius: 16px;
-  background: color-mix(in oklch, var(--heading), transparent 94%);
-  box-shadow: 0 16px 42px color-mix(in oklch, var(--shadow), transparent 32%);
-  opacity: 0;
-  transform: scale(0.985);
-  transition:
-    opacity 260ms var(--ease-out-quint),
-    transform 260ms var(--ease-out-quint);
+/* Poster rows: a small index number over an oversized title, no tiles. */
+.link-copy::before {
+  content: counter(row, decimal-leading-zero);
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.more-row-button .link-copy::before {
+  content: none;
 }
 
 .link-title {
   color: var(--heading);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.35;
+  font-size: clamp(28px, 6vw, 36px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-transform: lowercase;
+  transition: color 220ms var(--ease-out-quint);
 }
 
 .link-copy {
@@ -724,8 +979,8 @@ h2 {
 }
 
 .link-summary {
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.4;
 }
 
 .more-controls {
@@ -751,7 +1006,6 @@ h2 {
 
 .more-row-link .link-title {
   color: var(--secondary);
-  font-style: italic;
   transition: color 220ms var(--ease-out-quint);
 }
 
@@ -782,8 +1036,9 @@ h2 {
 }
 
 .more-row-count {
-  font-size: 13px;
-  letter-spacing: -0.02em;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
@@ -943,10 +1198,9 @@ h2 {
   transform: translateX(7px);
 }
 
-:root:not(.hover-cold) .page-link:hover::before,
-.page-link:focus-visible::before {
-  opacity: 1;
-  transform: scale(1);
+:root:not(.hover-cold) .page-link:hover .link-title,
+.page-link:focus-visible .link-title {
+  color: var(--accent);
 }
 
 .stagger-in {
@@ -1161,18 +1415,29 @@ h2 {
 @media (max-width: 650px) {
   .page-shell {
     width: min(100% - 34px, 592px);
-    padding-top: 48px;
+    /* Clears the corner theme toggle. */
+    padding-top: 72px;
   }
   .intro-panel {
     margin-bottom: 42px;
   }
+  /* Kicker and the Discord stat share one row; the kicker wraps before the widget does. */
   .intro-topline {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 8px;
+    align-items: center;
+    gap: 14px;
+  }
+  .kicker {
+    max-width: 9em;
+    line-height: 1.25;
   }
   .discord-status {
-    max-width: 100%;
+    max-width: 58vw;
+  }
+  .status-stat {
+    font-size: 19px;
+  }
+  .status-copy {
+    font-size: 12px;
   }
   .index-section {
     grid-template-columns: 1fr;
@@ -1181,62 +1446,90 @@ h2 {
   h2 {
     position: static;
   }
-  .work-section-title {
-    margin-bottom: -2px;
-    font-size: 18px;
-  }
   .page-list {
     margin: -7px 0;
   }
   .work-transition-link.has-image-stack {
     grid-template-columns: 60px minmax(0, 1fr);
+    gap: 16px;
   }
+  /* The date rides on the index-number line instead of taking a row of its own. */
   .work-link-meta {
-    grid-column: 2;
+    position: absolute;
+    top: 13px;
+    right: 0;
     font-size: 13px;
+    line-height: 1.4;
   }
-  .detail-header h1 {
-    font-size: 24px;
+  .link-title {
+    font-size: 28px;
   }
 }
 
+/*
+ * Reduced motion: reduce, don't remove. Anything that travels, zooms, spins or loops becomes a
+ * short fade or goes away; opacity and colour changes stay, so the page still answers back.
+ */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
+  * {
     scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
   }
 
-  ::view-transition-old(root),
-  ::view-transition-new(root),
-  ::view-transition,
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*),
-  ::view-transition-image-pair(*),
-  .route-enter-shell .stagger-in,
-  .route-enter-shell .page-list li,
-  .route-enter-shell .detail-block,
-  .route-enter-shell .more-controls,
-  .route-enter-shell [style*="--stagger"],
-  .polaroid-card {
+  /* Page changes: a plain crossfade; nothing slides or morphs into place. */
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+  }
+  ::view-transition-old(*) {
+    animation: rm-fade-out 180ms ease both !important;
+  }
+  ::view-transition-new(*) {
+    animation: rm-fade-in 180ms ease both !important;
+  }
+
+  /* Entrances keep the fade but lose the pop, rise and sweep. */
+  .back-chevron[data-back-mode="detail"],
+  .detail-hero,
+  .polaroid-card,
+  .detail-code[data-diff="played"] :is(.diff-add, .diff-remove)::before {
+    animation-name: rm-fade-in !important;
+  }
+
+  /* Loops and decorative movement go. */
+  .wave-char,
+  .wave:hover .wave-char,
+  .discord-status[data-status="online"] .status-ring::after {
     animation: none !important;
   }
 
-  :root[data-route-motion="home-to-work"] .route-enter-shell .stagger-in,
-  :root[data-route-motion="work-to-home"] .route-enter-shell .stagger-in,
-  :root[data-route-motion="home-to-work"]
-    .route-enter-shell
-    [style*="--stagger"],
-  :root[data-route-motion="work-to-home"]
-    .route-enter-shell
-    [style*="--stagger"] {
-    animation: none !important;
-    opacity: 1 !important;
-    filter: none !important;
+  /* Hover and press: colour and opacity only. These elements only ever move on interaction. */
+  .page-link,
+  .status-ring,
+  .discord-status,
+  .copy-badge,
+  .theme-toggle,
+  .theme-toggle svg,
+  .back-chevron svg,
+  .more-row-chevron,
+  .pill-button {
+    transform: none !important;
+  }
+  .has-image-stack:is(:hover, :focus-visible) .image-stack-card {
+    transform: translate(var(--rest-tx, 0), var(--rest-ty, 0)) !important;
+  }
+  .has-image-stack:active .polaroid-card {
+    scale: none;
+  }
+}
+
+@keyframes rm-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rm-fade-out {
+  to {
+    opacity: 0;
   }
 }
 
@@ -1331,4 +1624,68 @@ h2 {
 .more-row-date .morph-exit {
   left: auto;
   right: 0;
+}
+
+/* Theme toggle: a glass dot in the corner; sun and moon swap with a quarter turn. */
+.theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--heading), transparent 88%);
+  color: var(--heading);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 200ms var(--ease-out-quint),
+    color 200ms var(--ease-out-quint),
+    transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root:not(.hover-cold) .theme-toggle:hover,
+.theme-toggle:focus-visible {
+  background: #fff;
+  color: #2a2fe8;
+  outline: none;
+  transform: rotate(-12deg);
+}
+
+.theme-toggle:active {
+  transform: scale(0.88);
+}
+
+.theme-toggle svg {
+  grid-area: 1 / 1;
+  width: 18px;
+  height: 18px;
+  transition:
+    opacity 260ms var(--ease-out-quint),
+    transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* --dark is 0 or 1, so both icons can transition between states without extra selectors. */
+.theme-toggle .icon-moon {
+  opacity: calc(1 - var(--dark));
+  transform: rotate(calc(var(--dark) * 90deg)) scale(calc(1 - var(--dark) * 0.5));
+}
+
+.theme-toggle .icon-sun {
+  opacity: var(--dark);
+  transform: rotate(calc((1 - var(--dark)) * -90deg)) scale(calc(0.5 + var(--dark) * 0.5));
+}
+
+@media (max-width: 650px) {
+  .theme-toggle {
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+  }
 }
