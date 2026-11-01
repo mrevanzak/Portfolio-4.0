@@ -1,5 +1,6 @@
 ---
 import type { PortfolioImage } from "../lib/content";
+import Photo from "./Photo.astro";
 
 interface Props {
   images: PortfolioImage[];
@@ -61,7 +62,7 @@ const px = (n: number) => `${n.toFixed(2)}px`;
           style={`--fan-tx: ${px(tx)}; --fan-ty: ${px(ty)}; --fan-rot: ${rot.toFixed(2)}deg; --rest-tx: ${px(top ? 0 : tx * 0.15)}; --rest-ty: ${px(top ? 0 : ty * 0.15)}`}
         >
           <span class="polaroid-card" style={`--rot-to: ${rotations[i].toFixed(2)}deg; --pop-index: ${index + i * 0.5}`}>
-            <img src={image.src} alt="" loading="lazy" decoding="async" draggable="false" />
+            <Photo src={image.src} widths={[120, 240]} sizes="60px" alt="" loading="lazy" decoding="async" draggable="false" />
           </span>
         </span>
       );

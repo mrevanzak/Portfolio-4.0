@@ -1,0 +1,60 @@
+---
+import { getImage } from "astro:assets";
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends Omit<HTMLAttributes<"img">, "src" | "srcset"> {
+  src: string;
+  widths: number[];
+  sizes: string;
+}
+
+const { src, widths, sizes, ...attrs } = Astro.props as Props;
+
+// Notion hands out full-size originals behind S3 links that expire in an hour, so remote photos
+// are fetched and resized into dist at build time. Anything that can't be (data: SVGs, a dead link) ships as is.
+interface Rendered {
+  src: string;
+  srcset?: string;
+  width?: number;
+  height?: number;
+}
+
+async function optimize(url: string): Promise<Rendered> {
+  const out = await getImage({ src: url, inferSize: true, widths, format: "webp" });
+  return { src: out.src, srcset: out.srcSet.attribute, width: Number(out.attributes.width), height: Number(out.attributes.height) };
+}
+
+// Astro refuses redirected fetches, and GitHub's user-attachments links always redirect.
+async function finalUrl(url: string): Promise<string> {
+  const res = await fetch(url);
+  await res.body?.cancel();
+  return res.url;
+}
+
+async function render(url: string): Promise<Rendered> {
+  if (!/^https?:/.test(url)) return { src: url };
+  try {
+    return await optimize(url);
+  } catch (error) {
+    try {
+      const final = await finalUrl(url);
+      if (final !== url) return await optimize(final);
+    } catch {}
+    console.warn(`Photo: serving ${url.slice(0, 80)} unoptimized`, (error as Error).message);
+    return { src: url };
+  }
+}
+
+const img = await render(src);
+---
+
+<img
+  {...attrs}
+  src={img.src}
+  srcset={img.srcset}
+  sizes={img.srcset ? sizes : undefined}
+  width={img.width}
+  height={img.height}
+  data-fade
+  onload="this.dataset.loaded=''"
+/>
