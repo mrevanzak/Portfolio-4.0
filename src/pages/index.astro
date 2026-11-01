@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ImageStack from "../components/ImageStack.astro";
+import Signature from "../components/Signature.astro";
 import { getPortfolioContent } from "../lib/content";
 
 const { work, writing } = await getPortfolioContent({ includeBody: false });
@@ -40,7 +41,7 @@ const discordUserId = "192485745087348736";
           </span>
         </a>
       </div>
-      <h1 id="page-title" style="--stagger: 1">Rev</h1>
+      <h1 id="page-title" style="--stagger: 1"><Signature /></h1>
       <p class="lede" style="--stagger: 1">
         I make small, fast interfaces with careful motion, warm systems, and the occasional tool that feels better than it needs to.
       </p>
