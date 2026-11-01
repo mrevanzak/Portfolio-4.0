@@ -8,7 +8,9 @@
     "dev": "astro dev",
     "build": "astro check && astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "deploy": "alchemy deploy --stage prod",
+    "destroy": "alchemy destroy --stage prod"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -18,5 +20,14 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
+    "@effect/platform-bun": "4.0.7",
+    "alchemy": "2.0.0-beta.84",
+    "effect": "4.0.7"
+  },
+  "overrides": {
+    "effect": "4.0.7",
+    "@effect/platform-node-shared": "4.0.7"
+  }
 }
