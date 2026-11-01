@@ -34,7 +34,7 @@ const blocks: DetailBlock[] = item.body?.length ? item.body : item.summary ? [{ 
 const heroImage = item.images?.slice(0, 3).at(-1);
 ---
 
-<BaseLayout title={`${item.title} — Rev`} description={description}>
+<BaseLayout title={`${item.title} — Rev`} description={description} image={{ src: `/og${item.href}.png`, alt: `${item.title}: ${description}` }}>
   <main class="detail-shell route-enter-shell" data-route-shell data-route-view="detail" data-route-kind={item.kind} data-astro-transition-scope={`detail-${item.kind}`}>
     <a class="back-chevron" href="/" aria-label="Back" data-back-mode="detail">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
