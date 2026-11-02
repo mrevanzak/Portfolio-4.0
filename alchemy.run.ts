@@ -17,6 +17,11 @@ export default Alchemy.Stack(
       // Content comes from Notion at build time, so file hashes can't tell when to rebuild.
       memo: false,
       domain: "rvnza.com",
+      // Mirrors the dashboard toggle; Alchemy re-uploads this on every deploy, so a dashboard-only change gets reset.
+      observability: {
+        enabled: true,
+        logs: { enabled: true, invocationLogs: true, headSamplingRate: 1, persist: true },
+      },
     });
 
     return { url: site.url };
