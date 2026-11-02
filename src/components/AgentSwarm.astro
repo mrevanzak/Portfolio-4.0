@@ -394,6 +394,9 @@
       const parent = node.parentElement;
       // Nested blocks (h1 inside .detail-header) type themselves; svg text can't hold a span.
       if (!node.data.trim() || !parent || parent.closest(BLOCKS) !== block || parent.closest("svg")) continue;
+      // Skip text nobody can see: a closed accordion's body, the faded-out label behind More.
+      // No visibilityProperty: the block is still .swarm-pending (visibility: hidden) at this point.
+      if (!parent.checkVisibility({ opacityProperty: true })) continue;
       const ghost = document.createElement("span");
       ghost.className = "swarm-ghost";
       ghost.style.setProperty("--agent", color);
