@@ -52,7 +52,7 @@ async function loadHero(src: string | undefined): Promise<sharp.OverlayOptions |
 export const GET: APIRoute = async ({ props }) => {
   const { item } = props;
   // Same photo DetailPage uses as its hero.
-  const hero = await loadHero(item.images?.slice(0, 3).at(-1)?.src);
+  const hero = await loadHero(item.images?.[0]?.src);
   const title = wrap(item.title, hero ? 13 : 24, 2);
   const summary = wrap(item.summary ?? "", hero ? 32 : 58, 3);
   const summaryTop = 210 + title.length * 84;

@@ -10,7 +10,8 @@ interface Props {
 }
 
 const { images, index, class: className } = Astro.props as Props;
-const cards = images.slice(0, 3);
+// Reversed so the first image renders last, on top, matching the detail hero and Notion's card preview.
+const cards = images.slice(0, 3).reverse();
 
 // Park–Miller PRNG, as on ja.mt, so each row gets its own stable messy stack.
 function rng(seed: number): () => number {
