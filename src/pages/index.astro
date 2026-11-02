@@ -353,7 +353,8 @@ const experience = [
       index.toggleAttribute("data-linking", linking);
       if (linking) matches.forEach((el) => el.setAttribute("data-linked", ""));
     }
-    const linkTarget = (event: Event) => (event.target instanceof Element ? event.target.closest("[data-link]") : null);
+    // The More row only receives a link (to flip into the entry it hides); hovering it is just "More".
+    const linkTarget = (event: Event) => (event.target instanceof Element ? event.target.closest("[data-link]:not([data-more-row])") : null);
     // Touch skips it: a tap would flash the highlight, and the opened role links to its work instead.
     document.addEventListener("pointerover", (event) => { if (event.pointerType !== "touch") setLinked(linkTarget(event)); });
     document.addEventListener("pointerout", (event) => { if (!event.relatedTarget) setLinked(null); });
