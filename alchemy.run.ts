@@ -10,6 +10,8 @@ export default Alchemy.Stack(
   },
   Effect.gen(function* () {
     const site = yield* Cloudflare.Website.StaticSite("Website", {
+      // Renaming replaces the Worker: a new one is created, the domain moves over, the old one is deleted.
+      name: "rvnza",
       command: "bun run build",
       outdir: "dist",
       // Content comes from Notion at build time, so file hashes can't tell when to rebuild.
