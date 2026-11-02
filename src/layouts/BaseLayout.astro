@@ -16,6 +16,8 @@ const {
 } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogImage = new URL(image?.src ?? "/og.png", Astro.site);
+// Set by alchemy.run.ts on deploy; absent in dev, so local visits aren't counted.
+const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
 ---
 
 <!doctype html>
@@ -45,6 +47,9 @@ const ogImage = new URL(image?.src ?? "/og.png", Astro.site);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800;900&display=swap" />
     <title>{title}</title>
+    {beaconToken && (
+      <script is:inline defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon={JSON.stringify({ token: beaconToken })}></script>
+    )}
     <ClientRouter />
     <script is:inline>
       // Theme: follow the system unless the visitor picked one; the swap would drop <html> attributes, so re-apply after it.
