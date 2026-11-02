@@ -34,6 +34,34 @@
     filter: drop-shadow(0 2px 3px #0005);
   }
 
+  .swarm-cursor .swarm-ibeam,
+  .swarm-cursor[data-typing] .swarm-arrow {
+    display: none;
+  }
+
+  .swarm-cursor[data-typing] .swarm-ibeam {
+    display: block;
+  }
+
+  /* Untyped text keeps its space so nothing reflows, but stays invisible; the caret rides its left edge. */
+  .swarm-ghost {
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-decoration-color: transparent;
+    text-shadow: none;
+  }
+
+  .swarm-ghost[data-caret] {
+    box-shadow: inset 1.5px 0 var(--agent);
+    animation: swarm-caret 1s steps(1) infinite;
+  }
+
+  @keyframes swarm-caret {
+    50% {
+      box-shadow: none;
+    }
+  }
+
   .swarm-cursor b {
     position: absolute;
     top: 17px;
@@ -66,6 +94,49 @@
     font: 700 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
     white-space: nowrap;
     transform: translateX(-50%);
+  }
+
+  /* The ⌥-dragged copy of a list row: a real clone, frozen, floating above the page. */
+  .swarm-dupe {
+    position: fixed;
+    z-index: 8998;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none;
+    opacity: 0.85;
+  }
+
+  .swarm-dupe,
+  .swarm-dupe * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .swarm-dupe[data-selected] :is(.link-title, .work-link-meta) {
+    background: color-mix(in srgb, var(--agent), transparent 55%);
+  }
+
+  /* Figma-style red spacing measure between the original row and the copy. */
+  .swarm-gap {
+    position: fixed;
+    z-index: 8999;
+    margin-left: -4.5px;
+    width: 9px !important;
+    border-block: 1px solid #ff3b30;
+    background: linear-gradient(#ff3b30, #ff3b30) center / 1px 100% no-repeat;
+    pointer-events: none;
+  }
+
+  .swarm-gap span {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: #ff3b30;
+    color: #fff;
+    font: 700 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    translate: 0 -50%;
   }
 
   .swarm-log {
@@ -260,8 +331,8 @@
   let raf = 0;
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-  // Build pacing: 1 was a blur; higher is slower and easier to watch.
-  const PACE = 2;
+
+  const PACE = 0.7;
 
   function say(agent: { name: string; color: string }, text: string) {
     const lines = getLines();
@@ -278,7 +349,7 @@
     el.className = "swarm-cursor";
     el.style.setProperty("--agent", color);
     el.style.setProperty("--agent-ink", ink);
-    el.innerHTML = `<svg width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path d="M1.5 1.5 16 8.4l-6.3 2-2.6 6.4z" fill="${color}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg><b></b>`;
+    el.innerHTML = `<svg class="swarm-arrow" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path d="M1.5 1.5 16 8.4l-6.3 2-2.6 6.4z" fill="${color}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg><svg class="swarm-ibeam" width="10" height="20" viewBox="0 0 10 20" aria-hidden="true"><path d="M2 1.5h6M5 1.5v17M2 18.5h6" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/><path d="M2 1.5h6M5 1.5v17M2 18.5h6" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/></svg><b></b>`;
     el.querySelector("b")!.textContent = name;
     document.body.append(el);
     const angle = (i / AGENTS.length) * Math.PI * 2;
@@ -311,6 +382,64 @@
     return text.slice(0, 26) || "image";
   }
 
+  // Text is typed in place: each text node's untyped tail moves into a transparent span, so layout never shifts.
+  // Restores are tracked so esc mid-word always puts the real text back.
+  const restores = new Set<() => void>();
+
+  function prepareText(block: HTMLElement, color: string) {
+    const parts: { node: Text; text: string; ghost: HTMLElement }[] = [];
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const parent = node.parentElement;
+      // Nested blocks (h1 inside .detail-header) type themselves; svg text can't hold a span.
+      if (!node.data.trim() || !parent || parent.closest(BLOCKS) !== block || parent.closest("svg")) continue;
+      const ghost = document.createElement("span");
+      ghost.className = "swarm-ghost";
+      ghost.style.setProperty("--agent", color);
+      parts.push({ node, text: node.data, ghost });
+    }
+    for (const part of parts) {
+      part.ghost.textContent = part.text;
+      part.node.after(part.ghost);
+      part.node.data = "";
+    }
+    const restore = () => {
+      for (const part of parts) {
+        part.node.data = part.text;
+        part.ghost.remove();
+      }
+      restores.delete(restore);
+    };
+    restores.add(restore);
+    return { parts, restore };
+  }
+
+  async function type(agent: Agent, { parts, restore }: ReturnType<typeof prepareText>) {
+    const total = parts.reduce((sum, part) => sum + part.text.length, 0);
+    // Long paragraphs type in bigger bursts so no single block stalls the swarm.
+    const burst = Math.ceil(total / 90);
+    agent.el.dataset.typing = "";
+    for (const part of parts) {
+      part.ghost.dataset.caret = "";
+      for (let i = 0; i < part.text.length; ) {
+        await sleep((12 + Math.random() * 28) * PACE);
+        if (!restores.has(restore)) return; // esc'd mid-word; stop() already put the text back
+        i = Math.min(part.text.length, i + burst);
+        part.node.data = part.text.slice(0, i);
+        part.ghost.textContent = part.text.slice(i);
+        const caret = part.ghost.getClientRects()[0];
+        if (caret) {
+          agent.tx = caret.left - 5;
+          agent.ty = caret.top + caret.height / 2 - 10;
+        }
+      }
+      delete part.ghost.dataset.caret;
+    }
+    restore();
+    delete agent.el.dataset.typing;
+  }
+
   // The visitor scrolling takes priority; the swarm only follows along while they're hands-off.
   let lastUserScroll = 0;
   const markUserScroll = () => (lastUserScroll = performance.now());
@@ -326,17 +455,7 @@
     }
   }
 
-  async function build(agent: Agent, block: HTMLElement) {
-    follow(block);
-    // Rects are re-read every step, so scrolling mid-build keeps cursor and box glued to the block.
-    for (let step = 0; step < 8 && running; step++) {
-      const rect = block.getBoundingClientRect();
-      agent.tx = rect.left;
-      agent.ty = rect.top;
-      await sleep(40 * PACE);
-    }
-    if (!running) return;
-
+  function frame(agent: Agent) {
     const marquee = document.createElement("div");
     marquee.className = "swarm-marquee";
     marquee.style.setProperty("--agent", agent.color);
@@ -344,22 +463,124 @@
     const size = document.createElement("span");
     marquee.append(size);
     document.body.append(marquee);
+    return { marquee, size };
+  }
 
+  const place = (el: HTMLElement, rect: DOMRect) =>
+    Object.assign(el.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px` });
+
+  // Repeated rows are built Figma-style: select the first row, ⌥-drag a copy into place, retype it.
+  // Rows only duplicate from a first row this run has already started, so a rotated queue never deadlocks.
+  const jobs = new Map<HTMLElement, Promise<void>>();
+
+  function masterOf(block: HTMLElement) {
+    if (!block.matches(".page-list > li:not(.more-row-item)")) return;
+    const first = block.parentElement?.querySelector<HTMLElement>(":scope > li:not(.more-row-item)");
+    return first && first !== block && jobs.has(first) ? first : undefined;
+  }
+
+  async function duplicate(agent: Agent, master: HTMLElement, block: HTMLElement) {
+    follow(block);
+    const select = frame(agent);
+    select.size.textContent = "⌥ drag";
+    const grab = (rect: DOMRect) => {
+      agent.tx = rect.left + 48;
+      agent.ty = rect.top + rect.height / 2;
+    };
+    for (let step = 0; step < 10 && agents.includes(agent); step++) {
+      const rect = master.getBoundingClientRect();
+      place(select.marquee, rect);
+      grab(rect);
+      await sleep(40 * PACE);
+    }
+    if (!agents.includes(agent)) return;
+
+    const copy = master.parentElement!.cloneNode(false) as HTMLElement;
+    copy.append(master.cloneNode(true));
+    // A second live view-transition name (or id) would break the next page navigation.
+    for (const el of [copy, ...copy.querySelectorAll("*")]) {
+      el.removeAttribute("id");
+      el.removeAttribute("data-astro-transition-scope");
+    }
+    copy.classList.add("swarm-dupe");
+    copy.style.setProperty("--agent", agent.color);
+    const gap = document.createElement("div");
+    gap.className = "swarm-gap";
+    const gapLabel = document.createElement("span");
+    gap.append(gapLabel);
+    document.body.append(copy, gap);
+
+    const steps = 20;
+    for (let step = 1; step <= steps && agents.includes(agent); step++) {
+      const from = master.getBoundingClientRect();
+      const to = block.getBoundingClientRect();
+      const t = 1 - (1 - step / steps) ** 3;
+      const rect = new DOMRect(from.left + (to.left - from.left) * t, from.top + (to.top - from.top) * t, from.width, from.height);
+      place(copy, rect);
+      place(select.marquee, rect);
+      grab(rect);
+      const space = rect.top - from.bottom;
+      gap.hidden = space < 1;
+      place(gap, new DOMRect(rect.left + rect.width / 2, from.bottom, 0, Math.max(0, space)));
+      gapLabel.textContent = `${Math.round(space)}`;
+      await sleep(30 * PACE);
+    }
+    if (!agents.includes(agent)) return;
+
+    // Select-all on the copy, then the real row replaces it and gets retyped.
+    gap.remove();
+    copy.dataset.selected = "";
+    await sleep(260 * PACE);
+    copy.remove();
+    if (!agents.includes(agent)) return;
+    const text = prepareText(block, agent.color);
+    block.classList.remove("swarm-pending");
+    // The row's own picture wipes in over the copied one.
+    block.querySelectorAll("img").forEach((img) =>
+      img.animate([{ clipPath: "inset(0 0 100% 0)" }, { clipPath: "inset(0)" }], { duration: 420 * PACE, easing: "ease-out" })
+    );
+    if (text.parts.length) await type(agent, text);
+    if (!agents.includes(agent)) return;
+    say(agent, `duplicated row → ${blockLabel(block)}`);
+    await sleep(140 * PACE);
+    select.marquee.remove();
+  }
+
+  async function build(agent: Agent, block: HTMLElement) {
+    const master = masterOf(block);
+    if (master) {
+      await jobs.get(master);
+      return duplicate(agent, master, block);
+    }
+    follow(block);
+    // Rects are re-read every step, so scrolling mid-build keeps cursor and box glued to the block.
+    for (let step = 0; step < 8 && agents.includes(agent); step++) {
+      const rect = block.getBoundingClientRect();
+      agent.tx = rect.left;
+      agent.ty = rect.top;
+      await sleep(40 * PACE);
+    }
+    if (!agents.includes(agent)) return;
+
+    const { marquee, size } = frame(agent);
     const steps = 16;
-    for (let step = 1; step <= steps && running; step++) {
+    for (let step = 1; step <= steps && agents.includes(agent); step++) {
       const rect = block.getBoundingClientRect();
       const w = (rect.width * step) / steps;
       const h = (rect.height * step) / steps;
-      Object.assign(marquee.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${w}px`, height: `${h}px` });
+      place(marquee, new DOMRect(rect.left, rect.top, w, h));
       size.textContent = `${Math.round(w)} × ${Math.round(h)}`;
       agent.tx = rect.left + w;
       agent.ty = rect.top + h;
       await sleep(26 * PACE);
     }
 
+    const text = prepareText(block, agent.color);
     block.classList.remove("swarm-pending");
     block.animate([{ opacity: 0, filter: "blur(4px)" }, { opacity: 1, filter: "blur(0px)" }], { duration: 380, easing: "ease-out" });
-    say(agent, `placed ${blockLabel(block)}`);
+    if (text.parts.length) await type(agent, text);
+    if (!agents.includes(agent)) return;
+    say(agent, `${text.parts.length ? "typed" : "placed"} ${blockLabel(block)}`);
     await sleep(140 * PACE);
     marquee.remove();
   }
@@ -398,18 +619,25 @@
     }
 
     blocks.forEach((block) => block.classList.add("swarm-pending"));
-    agents = AGENTS.map((agent, i) => spawn(agent, i, origin));
+    // Each build loop checks its own crew, so esc + retype can't leave the old crew typing over the new one.
+    const crew = (agents = AGENTS.map((agent, i) => spawn(agent, i, origin)));
     raf = requestAnimationFrame(tick);
     say(swarm, `wiping ${page.name}. rebuilding…`);
 
     const queue = [...blocks];
+    jobs.clear();
     await Promise.all(
       agents.map(async (agent, i) => {
         await sleep((200 + i * 140) * PACE);
-        while (running && queue.length) await build(agent, queue.shift()!);
+        while (agents.includes(agent) && queue.length) {
+          const block = queue.shift()!;
+          const job = build(agent, block);
+          jobs.set(block, job);
+          await job;
+        }
       })
     );
-    if (!running) return;
+    if (agents !== crew) return;
     say(swarm, `${page.name} rebuilt. esc to go live`);
     agents.forEach((agent) => (agent.flock = true));
   }
@@ -420,7 +648,8 @@
     cancelAnimationFrame(raf);
     agents.forEach((agent) => agent.el.remove());
     agents = [];
-    document.querySelectorAll(".swarm-marquee").forEach((marquee) => marquee.remove());
+    document.querySelectorAll(".swarm-marquee, .swarm-dupe, .swarm-gap").forEach((el) => el.remove());
+    restores.forEach((restore) => restore());
     document.querySelectorAll(".swarm-pending").forEach((block) => block.classList.remove("swarm-pending"));
     const log = getLog();
     if (log) log.hidden = true;
