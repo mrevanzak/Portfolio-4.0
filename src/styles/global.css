@@ -7,7 +7,7 @@
   --dark: 0;
   --surface: #2a2fe8;
   --primary: #e4e7ff;
-  --secondary: #b4bcff;
+  --secondary: #c4cbff; /* ≥4.5:1 on the cobalt surface; #b4bcff measured 4.3 */
   --heading: #ffffff;
   --accent: #e6f83a;
   --divider: #ffffff29;
@@ -856,6 +856,11 @@ h1 {
   color: var(--shiki-dark) !important;
 }
 
+/* github-dark's comment gray measured 2.7:1 on this tint; a palette gray stays muted but clears 4.5:1 in both themes. */
+.detail-code pre.astro-code span[style*="--shiki-dark:#6A737D" i] {
+  color: #959bc9 !important;
+}
+
 .detail-figure :is(img, video) {
   display: block;
   width: 100%;
@@ -965,6 +970,292 @@ h2 {
 
 .work-transition-link.has-image-stack {
   grid-template-columns: 60px minmax(0, 1fr) auto;
+}
+
+/* Experience is supporting detail: one quiet line per role, so work stays the hero. */
+.experience-list {
+  gap: 0;
+  margin: -8px 0;
+}
+
+.experience-item {
+  transition:
+    opacity 260ms var(--ease-out-quint),
+    filter 260ms var(--ease-out-quint),
+    transform 260ms var(--ease-out-quint);
+}
+
+/* Same focus trick as work rows: the hovered role leans in, the rest step back. */
+.experience-list:has(summary:focus-visible) .experience-item:not(:has(summary:focus-visible)) {
+  opacity: 0.42;
+  filter: blur(var(--hover-blur));
+  transform: translateX(-3px);
+}
+
+.experience-item:has(summary:focus-visible) {
+  transform: translateX(5px);
+}
+
+/* Hover only where it is real: iOS keeps :hover after a tap, which would leave the list blurred. */
+@media (hover: hover) {
+  :root:not(.hover-cold) .experience-list:has(.experience-item:hover) .experience-item:not(:hover) {
+    opacity: 0.42;
+    filter: blur(var(--hover-blur));
+    transform: translateX(-3px);
+  }
+
+  :root:not(.hover-cold) .experience-item:hover {
+    transform: translateX(5px);
+  }
+}
+
+/* Linked hover: a role and its work entry highlight together; everything else steps back. */
+:root:not(.hover-cold) .content-index[data-linking] :is(.page-link, .experience-item):not([data-linked]) {
+  opacity: 0.42;
+  filter: blur(var(--hover-blur));
+  transform: translateX(-3px);
+}
+
+:root:not(.hover-cold) .content-index[data-linking] .page-link[data-linked] {
+  transform: translateX(7px);
+}
+
+:root:not(.hover-cold) .content-index[data-linking] .experience-item[data-linked] {
+  transform: translateX(5px);
+}
+
+:root:not(.hover-cold) .content-index[data-linking] .page-link[data-linked] .link-title,
+:root:not(.hover-cold) .content-index[data-linking] .experience-item[data-linked] .experience-company {
+  color: var(--accent);
+}
+
+/* A linked entry hiding behind More: the label flips to its title while the link is lit. */
+.more-row-peek {
+  display: none;
+}
+
+.more-row-link .more-row-peek {
+  display: block;
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(0.3em);
+}
+
+/* .link-copy bumps specificity past `.more-row-link .link-title`, which would cut this to color-only. */
+.more-row-link .link-copy :is([data-more-label], .more-row-peek) {
+  grid-row: 2;
+  grid-column: 1;
+  transition:
+    opacity 240ms var(--ease-out-quint),
+    filter 240ms var(--ease-out-quint),
+    transform 240ms var(--ease-out-quint),
+    color 220ms var(--ease-out-quint);
+}
+
+:root:not(.hover-cold) .content-index[data-linking] .more-row-link[data-linked] [data-more-label] {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(-0.3em);
+}
+
+:root:not(.hover-cold) .content-index[data-linking] .more-row-link[data-linked] .more-row-peek {
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+
+.experience-item summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto 13px;
+  grid-template-areas: "company role period chevron";
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 6px;
+  outline: none;
+  transform-origin: left center;
+  transition: scale 160ms var(--ease-out-quint);
+}
+
+.experience-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.experience-item summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.experience-item summary:active {
+  scale: 0.985;
+}
+
+.experience-company {
+  grid-area: company;
+  color: var(--heading);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  transition: color 220ms var(--ease-out-quint);
+}
+
+:root:not(.hover-cold) .experience-item summary:hover .experience-company,
+.experience-item summary:focus-visible .experience-company,
+.experience-item[open] .experience-company {
+  color: var(--accent);
+}
+
+.experience-role {
+  grid-area: role;
+  overflow: hidden;
+  color: var(--secondary);
+  font-size: 15px;
+  line-height: 1.35;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.experience-period {
+  grid-area: period;
+  color: var(--secondary);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.experience-chevron {
+  grid-area: chevron;
+  align-self: center;
+  color: var(--secondary);
+  transition:
+    transform 420ms var(--ease-out-expo),
+    color 220ms var(--ease-out-quint);
+}
+
+:root:not(.hover-cold) .experience-item summary:hover .experience-chevron,
+.experience-item[open] .experience-chevron {
+  color: var(--accent);
+}
+
+:root:not(.hover-cold) .experience-item:not([open]) summary:hover .experience-chevron {
+  transform: translateY(2px);
+}
+
+.experience-item[open] .experience-chevron {
+  transform: rotate(180deg);
+}
+
+.experience-summary {
+  max-width: 54ch;
+  margin: 0;
+  padding: 0 0 12px;
+  color: var(--secondary);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.experience-work-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: -4px 0 14px;
+  padding: 4px 0;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: lowercase;
+  border-radius: 4px;
+  outline: none;
+  transition: scale 160ms var(--ease-out-quint);
+}
+
+.experience-work-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.experience-work-link:active {
+  scale: 0.96;
+}
+
+.experience-work-arrow {
+  transition: transform 260ms var(--ease-out-quint);
+}
+
+:root:not(.hover-cold) .experience-work-link:hover .experience-work-arrow,
+.experience-work-link:focus-visible .experience-work-arrow {
+  transform: translateX(3px);
+}
+
+.experience-item[open] :is(.experience-summary, .experience-work-link) {
+  animation: experience-reveal 380ms var(--ease-out-quint) 40ms both;
+}
+
+.experience-item[open] .experience-work-link {
+  animation-delay: 100ms;
+}
+
+@keyframes experience-reveal {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .experience-item,
+  .experience-item summary,
+  .more-row-link :is([data-more-label], .more-row-peek) {
+    transform: none !important;
+    scale: none !important;
+  }
+
+  /* The flip still says "open"; it just snaps instead of turning. */
+  .experience-chevron {
+    transition: color 220ms var(--ease-out-quint);
+  }
+
+  .experience-item[open] :is(.experience-summary, .experience-work-link) {
+    animation-name: rm-fade-in;
+  }
+
+  .experience-work-arrow {
+    transform: none !important;
+  }
+}
+
+/* Progressive: browsers with ::details-content slide the description open; others just show it. */
+@media (prefers-reduced-motion: no-preference) {
+  .experience-item {
+    interpolate-size: allow-keywords;
+  }
+
+  .experience-item::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 300ms var(--ease-out-quint),
+      content-visibility 300ms allow-discrete;
+  }
+
+  .experience-item[open]::details-content {
+    block-size: auto;
+  }
+}
+
+@media (max-width: 650px) {
+  .experience-item summary {
+    grid-template-columns: minmax(0, 1fr) auto 13px;
+    grid-template-areas:
+      "company period chevron"
+      "role role role";
+    row-gap: 0;
+  }
 }
 
 .work-link-meta {
@@ -1782,4 +2073,23 @@ h2 {
   .footer-arrow {
     transform: none !important;
   }
+}
+
+/* Light mode: these sit on the bright top glow, where #c4cbff falls under 4.5:1 (measured 3.1–4.1). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) :is(.kicker, .status-copy) {
+    color: var(--heading);
+  }
+
+  :root:not([data-theme="dark"]) :is([data-route-view="work"], [data-expanded]) .work-link-meta {
+    color: var(--primary);
+  }
+}
+
+:root[data-theme="light"] :is(.kicker, .status-copy) {
+  color: var(--heading);
+}
+
+:root[data-theme="light"] :is([data-route-view="work"], [data-expanded]) .work-link-meta {
+  color: var(--primary);
 }

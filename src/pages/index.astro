@@ -13,6 +13,16 @@ const oldPortfolios = [
   ["v2", "https://portofolio-2.vercel.app"],
   ["og", "https://portofolio-1-kappa.vercel.app"]
 ];
+// Newest first, from LinkedIn. `work` is the slug of a related work entry, highlighted together on hover.
+const experience = [
+  { company: "AccessTime", role: "Founding Software Engineer", period: "2025 — now", summary: "Building an accessibility SaaS from scratch (automated WCAG scanning, dashboards, scheduled reports) and a multi-tenant loyalty platform for Shopify brands." },
+  { company: "Niyyah", role: "Software Engineer, contract", period: "2025 — 2026", work: "niyyah", summary: "Built the Quran reader and verse-level AI Q&A in React Native and Realm, for an app with 150k+ users." },
+  { company: "Apple Developer Academy", role: "iOS Engineer", period: "2025", work: "kreta", summary: "Picked from 20,000+ applicants at UC Surabaya. Shipped five iOS and iPadOS apps in SwiftUI, including Kreta, Keruh, and PewPew." },
+  { company: "Hyge", role: "Software Engineer", period: "2024 — 2025", work: "airple", summary: "Sole mobile developer across four React Native apps with 5k+ users: iOS Live Activities, live location tracking, push notifications, and store releases." },
+  { company: "SKK Migas", role: "Software Engineer, contract", period: "2023", summary: "Built the vendor, admin, and KKKS platforms for IOG E-commerce in Next.js, through its public launch." },
+  { company: "Telkom Indonesia", role: "Software Engineer intern", period: "2023", summary: "Designed the schema and built a Laravel API for Tomps Indonesia, plus Next.js and Vue frontends." },
+  { company: "DELOS", role: "Software Engineer intern", period: "2022 — 2023", summary: "Moved the codebase to TypeScript, got the team writing it, and raised Jest coverage past 90%." }
+].map((job) => ({ ...job, related: job.work ? work.find((item) => item.slug === job.work) : undefined }));
 ---
 
 <BaseLayout title="Rev — Design & engineering" description="Rev makes small, fast interfaces with careful motion, warm systems, and the occasional tool that feels better than it needs to.">
@@ -67,7 +77,7 @@ const oldPortfolios = [
         <ol class="page-list work-transition-list" data-more-list transition:name="work-list">
           {work.slice(0, visibleCount).map((item, index) => (
             <li style={`--stagger: ${3 + index}`}>
-              <a class:list={["page-link", "work-transition-link", item.images?.length && "has-image-stack"]} href={item.href} transition:name={`work-item-${item.slug ?? index}`}>
+              <a class:list={["page-link", "work-transition-link", item.images?.length && "has-image-stack"]} href={item.href} data-link={item.slug} transition:name={`work-item-${item.slug ?? index}`}>
                 {item.images?.length && <ImageStack images={item.images} index={index} />}
                 <span class="link-copy">
                   <span class="link-title">{item.title}</span>
@@ -86,6 +96,7 @@ const oldPortfolios = [
                   href="/work"
                   aria-label="Show more work"
                   data-more-row
+                  data-link={peekItem.slug}
                   data-href={peekItem.href}
                   data-title={peekItem.title}
                   data-date={peekItem.date}
@@ -93,6 +104,7 @@ const oldPortfolios = [
                   {peekItem.images?.length && <ImageStack images={peekItem.images} index={visibleCount} class="more-row-stack" />}
                   <span class="link-copy">
                     <span class="link-title" data-more-label>More</span>
+                    <span class="link-title more-row-peek" aria-hidden="true">{peekItem.title}</span>
                   </span>
                   <span class="work-link-meta more-row-meta">
                     <span class="more-row-date" data-more-date></span>
@@ -109,13 +121,42 @@ const oldPortfolios = [
           })()}
           {work.slice(visibleCount + 1).map((item, index) => (
             <li class="extra-item" style={`--stagger: ${index}`} hidden>
-              <a class:list={["page-link", "work-transition-link", item.images?.length && "has-image-stack"]} href={item.href}>
+              <a class:list={["page-link", "work-transition-link", item.images?.length && "has-image-stack"]} href={item.href} data-link={item.slug}>
                 {item.images?.length && <ImageStack images={item.images} index={visibleCount + 1 + index} />}
                 <span class="link-copy">
                   <span class="link-title">{item.title}</span>
                 </span>
                 <span class="work-link-meta">{item.date}</span>
               </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <div class="entry-divider" aria-hidden="true" data-collapsible></div>
+
+      <section class="index-section" aria-labelledby="experience-title" data-collapsible>
+        <h2 id="experience-title" style={`--stagger: ${4 + visibleCount}`}>experience</h2>
+        <ol class="page-list experience-list">
+          {experience.map((job, index) => (
+            <li style={`--stagger: ${5 + visibleCount + index}`}>
+              <details class="experience-item" data-link={job.work}>
+                <summary>
+                  <span class="experience-company">{job.company}</span>
+                  <span class="experience-role">{job.role}</span>
+                  <span class="experience-period">{job.period}</span>
+                  <svg class="experience-chevron" width="13" height="13" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+                    <path d="M3.75 5.625L7.5 9.375L11.25 5.625" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </summary>
+                <p class="experience-summary">{job.summary}</p>
+                {/* Touch has no hover highlight, so an opened role links to its work directly. */}
+                {job.related && (
+                  <a class="experience-work-link" href={job.related.href}>
+                    See {job.related.title}<span class="experience-work-arrow" aria-hidden="true">→</span>
+                  </a>
+                )}
+              </details>
             </li>
           ))}
         </ol>
@@ -297,6 +338,28 @@ const oldPortfolios = [
     updateDiscordStatus();
     const discordStatusInterval = window.setInterval(updateDiscordStatus, 60_000);
     document.addEventListener("astro:before-swap", () => window.clearInterval(discordStatusInterval), { once: true });
+
+    // A role and the work it produced light up together. Delegated on document so it survives ClientRouter swaps.
+    let linkSource: Element | null = null;
+    function setLinked(source: Element | null) {
+      if (source === linkSource) return;
+      linkSource = source;
+      const index = document.querySelector(".content-index");
+      if (!index) return;
+      index.querySelectorAll("[data-linked]").forEach((el) => el.removeAttribute("data-linked"));
+      const key = source?.getAttribute("data-link");
+      const matches = key ? [...index.querySelectorAll(`[data-link="${CSS.escape(key)}"]`)] : [];
+      const linking = matches.length > 1;
+      index.toggleAttribute("data-linking", linking);
+      if (linking) matches.forEach((el) => el.setAttribute("data-linked", ""));
+    }
+    const linkTarget = (event: Event) => (event.target instanceof Element ? event.target.closest("[data-link]") : null);
+    // Touch skips it: a tap would flash the highlight, and the opened role links to its work instead.
+    document.addEventListener("pointerover", (event) => { if (event.pointerType !== "touch") setLinked(linkTarget(event)); });
+    document.addEventListener("pointerout", (event) => { if (!event.relatedTarget) setLinked(null); });
+    document.addEventListener("focusin", (event) => { if (event.target instanceof Element && event.target.matches(":focus-visible")) setLinked(linkTarget(event)); });
+    document.addEventListener("focusout", () => setLinked(null));
+    document.addEventListener("astro:before-swap", () => setLinked(null));
 
     const sections = document.querySelectorAll(".index-section");
 
