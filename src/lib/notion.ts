@@ -326,3 +326,16 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
+
+// Returns the first file on the row with this title, published or not (the resume row stays unpublished).
+export async function getNotionFileUrl(databaseId: string | undefined, title: string) {
+  if (!hasNotionConfig(databaseId)) return undefined;
+
+  const notion = new Client({ auth: token });
+  const { results } = await notion.databases.query({
+    database_id: databaseId,
+    filter: { property: "Title", title: { equals: title } }
+  });
+  const page = results.find((result): result is PageObjectResponse => "properties" in result);
+  return page ? readImages(page, "Image")[0]?.src : undefined;
+}

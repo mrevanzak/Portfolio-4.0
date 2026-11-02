@@ -304,7 +304,7 @@ a {
 .intro-panel {
   display: grid;
   gap: 10px;
-  margin: 0 0 52px;
+  margin: 0 0 40px;
 }
 
 .intro-topline {
@@ -1739,9 +1739,6 @@ h2 {
     /* Clears the corner theme toggle. */
     padding-top: 72px;
   }
-  .intro-panel {
-    margin-bottom: 42px;
-  }
   /* Kicker and the Discord stat share one row; the kicker wraps before the widget does. */
   .intro-topline {
     align-items: center;
@@ -2092,4 +2089,12 @@ h2 {
 
 :root[data-theme="light"] :is([data-route-view="work"], [data-expanded]) .work-link-meta {
   color: var(--primary);
+}
+
+/* Set off from the lede by ~1.3x its line pitch so it reads as an action, not a fourth line;
+   the bottom margin cancels the hit-area padding so the gap to the divider stays the intro's own. */
+.resume-print {
+  justify-self: start;
+  margin: 0 0 -4px;
+  font-size: 15px;
 }

@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ImageStack from "../components/ImageStack.astro";
 import Signature from "../components/Signature.astro";
+import ResumePrinter from "../components/ResumePrinter.astro";
 import { getPortfolioContent } from "../lib/content";
 
 const { work, writing } = await getPortfolioContent({ includeBody: false });
@@ -67,6 +68,9 @@ const experience = [
           <>{w > 0 && " "}<span class="wave-word" aria-hidden="true">{[...word].map((char, i) => <span class="wave-char" style={`--i: ${w * 8 + i}`}>{char}</span>)}{w > 0 && <span class="wave-tail">,</span>}</span></>
         ))}</span> warm systems, and the occasional tool that feels better than it needs to.
       </p>
+      <a class="experience-work-link resume-print stagger-in" href="/resume.pdf" target="_blank" rel="noreferrer" style="--stagger: 2" data-resume-print>
+        <span class="experience-work-arrow" aria-hidden="true">→</span>print my resume
+      </a>
     </header>
 
     <section class="content-index" id="content" aria-label="Portfolio index">
@@ -216,6 +220,7 @@ const experience = [
         ))}
       </p>
     </footer>
+    <ResumePrinter />
   </main>
 
   <script>

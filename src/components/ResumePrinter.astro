@@ -1,0 +1,304 @@
+---
+// Opened by any `[data-resume-print]` link; the link itself points at /resume.pdf so it still works without JS.
+---
+
+<dialog class="resume-dialog" aria-label="Resume" data-resume-dialog>
+  <div class="paper-slot">
+    <div class="paper" data-resume-paper>
+      <div class="paper-pages" role="img" aria-label="Resume" data-resume-pages></div>
+    </div>
+  </div>
+  <div class="printer">
+    <span class="printer-led" aria-hidden="true"></span>
+    <a href="/resume.pdf" download="Revanza-Kurniawan-Resume.pdf">download</a>
+    <a href="/resume.pdf" target="_blank" rel="noreferrer">open<span aria-hidden="true">↗</span></a>
+    <button type="button" autofocus data-resume-tear>tear off<span aria-hidden="true">✕</span></button>
+  </div>
+</dialog>
+
+<style>
+  .resume-dialog {
+    --paper-w: min(calc(100vw - 32px), 600px);
+    --feed: 1900ms;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    border: 0;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  .resume-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .resume-dialog::backdrop {
+    background: color-mix(in srgb, var(--surface) 72%, #000);
+    backdrop-filter: blur(6px);
+    animation: resume-fade 260ms var(--ease-out-quint) both;
+  }
+
+  /* Clips the paper at the printer's slit, only on the bottom so a torn sheet can fly out. */
+  .paper-slot {
+    position: relative;
+    z-index: 0;
+    clip-path: inset(-100vh -100vw 0 -100vw);
+    margin-bottom: -4px;
+  }
+
+  .paper {
+    width: var(--paper-w);
+    height: min(calc(var(--paper-w) * 1.414), calc(100dvh - 120px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #fff;
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 -12px 40px var(--shadow);
+    translate: 0 100%;
+  }
+
+  .paper-pages :global(canvas) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Continuous-feed paper: pages are joined by a perforation. */
+  .paper-pages :global(canvas + canvas) {
+    border-top: 1px dashed #0003;
+  }
+
+  .resume-dialog.is-printing .paper {
+    animation: paper-feed var(--feed) var(--ease-out-quint) both;
+  }
+
+  .resume-dialog.is-printed .paper {
+    translate: 0 0;
+  }
+
+  /* Torn free: the bottom gets a ragged edge and the sheet is tossed off the top. */
+  .resume-dialog.is-tearing .paper {
+    translate: 0 0;
+    mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 14px 100%;
+    animation: paper-toss 620ms cubic-bezier(0.5, 0, 0.75, 0) both;
+  }
+
+  .printer {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: calc(var(--paper-w) + 28px);
+    max-width: calc(100vw - 16px);
+    padding: 12px 14px 12px 18px;
+    border-radius: 14px;
+    background: linear-gradient(#1b1e6e, #0d0f4d);
+    box-shadow:
+      inset 0 1px 0 #ffffff24,
+      0 18px 40px #00000059;
+    color: #d6daff;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: lowercase;
+  }
+
+  /* The slit the paper comes out of. */
+  .printer::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 10px;
+    right: 10px;
+    height: 3px;
+    border-radius: 3px;
+    background: #03041f;
+  }
+
+  .resume-dialog.is-printing .printer {
+    animation: printer-buzz 90ms linear 21 alternate; /* ≈ --feed */
+  }
+
+  .printer-led {
+    width: 8px;
+    height: 8px;
+    margin-right: auto;
+    border-radius: 50%;
+    background: #4ade80;
+    box-shadow: 0 0 10px #4ade80;
+  }
+
+  .resume-dialog:not(.is-printed, .is-tearing) .printer-led {
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: led-blink 240ms steps(2, jump-none) infinite;
+  }
+
+  .printer :is(a, button) {
+    display: inline-flex;
+    gap: 3px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition:
+      background 180ms var(--ease-out-quint),
+      scale 160ms var(--ease-out-quint);
+  }
+
+  :global(:root:not(.hover-cold)) .printer :is(a, button):hover,
+  .printer :is(a, button):focus-visible {
+    background: #ffffff1f;
+    color: #fff;
+  }
+
+  .printer :is(a, button):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .printer :is(a, button):active {
+    scale: 0.95;
+  }
+
+  /* Jolts of a receipt printer: feed, pause, feed. */
+  @keyframes paper-feed {
+    0% { translate: 0 100%; }
+    14%, 22% { translate: 0 80%; }
+    36%, 44% { translate: 0 56%; }
+    58%, 66% { translate: 0 32%; }
+    80%, 86% { translate: 0 10%; }
+    100% { translate: 0 0; }
+  }
+
+  @keyframes paper-toss {
+    to { translate: 4% -115vh; rotate: -9deg; }
+  }
+
+  @keyframes printer-buzz {
+    from { translate: -0.6px 0; }
+    to { translate: 0.6px 0; }
+  }
+
+  @keyframes led-blink {
+    to { opacity: 0.25; }
+  }
+
+  @keyframes resume-fade {
+    from { opacity: 0; }
+  }
+
+  .resume-dialog.is-tearing::backdrop {
+    animation: resume-fade 620ms ease-in reverse both;
+  }
+
+  .resume-dialog.is-tearing .printer {
+    animation: resume-fade 420ms ease-in 200ms reverse both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .resume-dialog.is-printing .paper,
+    .resume-dialog.is-tearing .paper {
+      translate: 0 0;
+      animation: resume-fade 200ms ease both;
+    }
+
+    .resume-dialog.is-tearing .paper {
+      animation-direction: reverse;
+    }
+
+    .resume-dialog.is-printing .printer,
+    .resume-dialog .printer-led {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  const getDialog = () => document.querySelector<HTMLDialogElement>("[data-resume-dialog]");
+
+  // Delegated on document so it survives ClientRouter swaps.
+  document.addEventListener("click", (event) => {
+    const target = event.target as Element;
+    const dialog = getDialog();
+    if (!dialog) return;
+    if (target.closest?.("[data-resume-print]")) {
+      event.preventDefault();
+      print(dialog);
+    } else if (dialog.open && (target === dialog || target.closest?.("[data-resume-tear]"))) {
+      tear(dialog);
+    }
+  });
+
+  // `cancel` (Escape) doesn't bubble, so it's caught on the way down.
+  document.addEventListener("cancel", (event) => {
+    const dialog = getDialog();
+    if (event.target !== dialog || !dialog) return;
+    event.preventDefault();
+    tear(dialog);
+  }, true);
+
+  // Keyed by element: a ClientRouter swap brings a fresh, empty dialog.
+  const rendered = new WeakMap<HTMLElement, Promise<void>>();
+
+  async function print(dialog: HTMLDialogElement) {
+    const paper = dialog.querySelector<HTMLElement>("[data-resume-paper]")!;
+    dialog.className = "resume-dialog";
+    paper.scrollTop = 0;
+    dialog.showModal();
+
+    const pages = dialog.querySelector<HTMLElement>("[data-resume-pages]")!;
+    if (!rendered.has(pages)) rendered.set(pages, render(pages));
+    try {
+      await rendered.get(pages);
+    } catch (error) {
+      rendered.delete(pages);
+      pages.replaceChildren();
+      console.warn("Resume render failed, opening the PDF instead", error);
+      dialog.close();
+      location.href = "/resume.pdf";
+      return;
+    }
+    if (!dialog.open || dialog.classList.contains("is-tearing")) return;
+    dialog.classList.add("is-printing");
+    paper.addEventListener("animationend", () => dialog.classList.replace("is-printing", "is-printed"), { once: true });
+  }
+
+  // Pages are drawn to canvas (not a PDF frame) so the sheet looks like paper, and so Android Chrome shows it at all.
+  async function render(pages: HTMLElement) {
+    const [{ getDocument, GlobalWorkerOptions }, { default: workerSrc }] = await Promise.all([
+      import("pdfjs-dist/legacy/build/pdf.mjs"),
+      import("pdfjs-dist/legacy/build/pdf.worker.min.mjs?url")
+    ]);
+    GlobalWorkerOptions.workerSrc = workerSrc;
+    const pdf = await getDocument({ url: "/resume.pdf" }).promise;
+    const width = pages.clientWidth * devicePixelRatio;
+
+    for (let number = 1; number <= pdf.numPages; number++) {
+      const page = await pdf.getPage(number);
+      const viewport = page.getViewport({ scale: width / page.getViewport({ scale: 1 }).width });
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvas, viewport }).promise;
+      pages.append(canvas);
+    }
+  }
+
+  function tear(dialog: HTMLDialogElement) {
+    if (dialog.classList.contains("is-tearing")) return;
+    dialog.className = "resume-dialog is-tearing";
+    dialog.querySelector("[data-resume-paper]")!.addEventListener("animationend", () => dialog.close(), { once: true });
+  }
+</script>
