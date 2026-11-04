@@ -1,5 +1,8 @@
 ---
 // Opened by any `[data-resume-print]` link; the link itself points at /resume.pdf so it still works without JS.
+import { getResumeFile } from "../lib/notion";
+
+const fileName = (await getResumeFile())?.alt ?? "resume.pdf";
 ---
 
 <dialog class="resume-dialog" aria-label="Resume" data-resume-dialog>
@@ -10,7 +13,8 @@
   </div>
   <div class="printer">
     <span class="printer-led" aria-hidden="true"></span>
-    <a href="/resume.pdf" download="Revanza-Kurniawan-Resume.pdf">download</a>
+    <span class="printer-file">{fileName}</span>
+    <a href="/resume.pdf" download={fileName}>download</a>
     <a href="/resume.pdf" target="_blank" rel="noreferrer">open<span aria-hidden="true">↗</span></a>
     <button type="button" autofocus data-resume-tear>tear off<span aria-hidden="true">✕</span></button>
   </div>
@@ -130,10 +134,22 @@
   .printer-led {
     width: 8px;
     height: 8px;
-    margin-right: auto;
+    flex: none;
+    margin-right: 8px;
     border-radius: 50%;
     background: #4ade80;
     box-shadow: 0 0 10px #4ade80;
+  }
+
+  .printer-file {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+    text-transform: none;
+    opacity: 0.7;
   }
 
   .resume-dialog:not(.is-printed, .is-tearing) .printer-led {

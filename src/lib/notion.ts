@@ -327,8 +327,13 @@ function slugify(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
+// The resume PDF sits on the "CV" row; `alt` is the file's name as uploaded to Notion.
+export function getResumeFile() {
+  return getNotionFile(import.meta.env.NOTION_PROJECTS_DATABASE_ID ?? import.meta.env.NOTION_DATABASE, "CV");
+}
+
 // Returns the first file on the row with this title, published or not (the resume row stays unpublished).
-export async function getNotionFileUrl(databaseId: string | undefined, title: string) {
+async function getNotionFile(databaseId: string | undefined, title: string) {
   if (!hasNotionConfig(databaseId)) return undefined;
 
   const notion = new Client({ auth: token });
@@ -337,5 +342,5 @@ export async function getNotionFileUrl(databaseId: string | undefined, title: st
     filter: { property: "Title", title: { equals: title } }
   });
   const page = results.find((result): result is PageObjectResponse => "properties" in result);
-  return page ? readImages(page, "Image")[0]?.src : undefined;
+  return page ? readImages(page, "Image")[0] : undefined;
 }

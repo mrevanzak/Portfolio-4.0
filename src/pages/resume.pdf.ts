@@ -1,10 +1,9 @@
 import type { APIRoute } from "astro";
-import { getNotionFileUrl } from "../lib/notion";
+import { getResumeFile } from "../lib/notion";
 
-// The PDF sits on the "CV" row in Notion. Its file link expires an hour after the build, so it is copied into dist.
+// Notion's file link expires an hour after the build, so the PDF is copied into dist.
 export const GET: APIRoute = async () => {
-  const databaseId = import.meta.env.NOTION_PROJECTS_DATABASE_ID ?? import.meta.env.NOTION_DATABASE;
-  const url = await getNotionFileUrl(databaseId, "CV");
+  const url = (await getResumeFile())?.src;
   if (!url) throw new Error('Resume not found: expected a Notion row titled "CV" with the PDF in its Image property');
 
   const res = await fetch(url);
