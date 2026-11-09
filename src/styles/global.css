@@ -1358,8 +1358,12 @@ h2 {
   display: grid;
 }
 
-.more-row-stacks > * {
+/* WebKit crops opacity/filter to the element's box; grow it to fit the tilted, fanned cards, margins keep the 60×34 footprint. */
+.more-row-stacks > .image-stack {
   grid-area: 1 / 1;
+  width: 100px;
+  height: 76px;
+  margin: -21px -20px;
 }
 
 .more-row-peek-stack {
