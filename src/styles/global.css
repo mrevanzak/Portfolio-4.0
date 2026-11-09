@@ -1354,6 +1354,23 @@ h2 {
   color: var(--heading);
 }
 
+.more-row-stacks {
+  display: grid;
+}
+
+.more-row-stacks > * {
+  grid-area: 1 / 1;
+}
+
+.more-row-peek-stack {
+  transition: opacity 220ms var(--ease-out-quint);
+}
+
+.more-row-link .more-row-peek-stack,
+.page-link:not(.more-row-link) .more-row-stack {
+  opacity: 0;
+}
+
 .more-row-stack {
   opacity: 0.82;
   filter: saturate(0.78);

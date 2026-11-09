@@ -105,7 +105,11 @@ const experience = [
                   data-title={peekItem.title}
                   data-date={peekItem.date}
                 >
-                  {peekItem.images?.length && <ImageStack images={peekItem.images} index={visibleCount} class="more-row-stack" />}
+                  {/* Collapsed: one cover from each hidden entry. Expanded: the peeked entry's own stack. */}
+                  <span class="more-row-stacks">
+                    <ImageStack images={work.slice(visibleCount).flatMap((item) => item.images?.slice(0, 1) ?? [])} index={visibleCount} class="more-row-stack" />
+                    {peekItem.images?.length && <ImageStack images={peekItem.images} index={visibleCount} class="more-row-peek-stack" />}
+                  </span>
                   <span class="link-copy">
                     <span class="link-title" data-more-label>More</span>
                     <span class="link-title more-row-peek" aria-hidden="true">{peekItem.title}</span>
