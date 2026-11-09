@@ -601,7 +601,6 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
 
           // The More row becomes the entry it was previewing.
           ui.row.classList.remove("more-row-link");
-          ui.row.querySelector(".image-stack")?.classList.remove("more-row-stack");
           ui.row.href = ui.row.dataset.href;
           ui.row.removeAttribute("aria-label");
           morphText(ui.label, ui.row.dataset.title, 280);
@@ -649,7 +648,6 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
           // Back into a More row once the slide is a third of the way home.
           setTimeout(() => {
             ui.row.classList.add("more-row-link");
-            ui.row.querySelector(".image-stack")?.classList.add("more-row-stack");
             ui.row.href = "/work";
             ui.row.setAttribute("aria-label", "Show more work");
             morphText(ui.label, "More", 280);
