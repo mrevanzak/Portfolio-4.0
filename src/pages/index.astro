@@ -14,16 +14,16 @@ const oldPortfolios = [
   ["v2", "https://portofolio-2.vercel.app"],
   ["og", "https://portofolio-1-kappa.vercel.app"]
 ];
-// Newest first, from LinkedIn. `work` is the slug of a related work entry, highlighted together on hover.
+// Newest first, from LinkedIn. `work` lists the slugs of related work entries, highlighted together on hover.
 const experience = [
   { company: "AccessTime", role: "Founding Software Engineer", period: "2025 — now", summary: "Building an accessibility SaaS from scratch (automated WCAG scanning, dashboards, scheduled reports) and a multi-tenant loyalty platform for Shopify brands." },
-  { company: "Niyyah", role: "Software Engineer, contract", period: "2025 — 2026", work: "niyyah", summary: "Built the Quran reader and verse-level AI Q&A in React Native and Realm, for an app with 150k+ users." },
-  { company: "Apple Developer Academy", role: "iOS Engineer", period: "2025", work: "kreta", summary: "Picked from 20,000+ applicants at UC Surabaya. Shipped five iOS and iPadOS apps in SwiftUI, including Kreta, Keruh, and PewPew." },
-  { company: "Hyge", role: "Software Engineer", period: "2024 — 2025", work: "airple", summary: "Sole mobile developer across four React Native apps with 5k+ users: iOS Live Activities, live location tracking, push notifications, and store releases." },
+  { company: "Niyyah", role: "Software Engineer, contract", period: "2025 — 2026", work: ["niyyah"], summary: "Built the Quran reader and verse-level AI Q&A in React Native and Realm, for an app with 150k+ users." },
+  { company: "Apple Developer Academy", role: "iOS Engineer", period: "2025", work: ["kreta", "keruh", "pewpew"], summary: "Picked from 20,000+ applicants at UC Surabaya. Shipped five iOS and iPadOS apps in SwiftUI, including Kreta, Keruh, and PewPew." },
+  { company: "Hyge", role: "Software Engineer", period: "2024 — 2025", work: ["airple"], summary: "Sole mobile developer across four React Native apps with 5k+ users: iOS Live Activities, live location tracking, push notifications, and store releases." },
   { company: "SKK Migas", role: "Software Engineer, contract", period: "2023", summary: "Built the vendor, admin, and KKKS platforms for IOG E-commerce in Next.js, through its public launch." },
   { company: "Telkom Indonesia", role: "Software Engineer intern", period: "2023", summary: "Designed the schema and built a Laravel API for Tomps Indonesia, plus Next.js and Vue frontends." },
   { company: "DELOS", role: "Software Engineer intern", period: "2022 — 2023", summary: "Moved the codebase to TypeScript, got the team writing it, and raised Jest coverage past 90%." }
-].map((job) => ({ ...job, related: job.work ? work.find((item) => item.slug === job.work) : undefined }));
+].map((job) => ({ ...job, related: work.filter((item) => job.work?.includes(item.slug)) }));
 ---
 
 <BaseLayout title="Rev — Design & engineering" description="Rev makes small, fast interfaces with careful motion, warm systems, and the occasional tool that feels better than it needs to.">
@@ -144,7 +144,7 @@ const experience = [
         <ol class="page-list experience-list">
           {experience.map((job, index) => (
             <li style={`--stagger: ${5 + visibleCount + index}`}>
-              <details class="experience-item" data-link={job.work}>
+              <details class="experience-item" data-link={job.work?.join(" ")}>
                 <summary>
                   <span class="experience-company">{job.company}</span>
                   <span class="experience-role">{job.role}</span>
@@ -155,10 +155,14 @@ const experience = [
                 </summary>
                 <p class="experience-summary">{job.summary}</p>
                 {/* Touch has no hover highlight, so an opened role links to its work directly. */}
-                {job.related && (
-                  <a class="experience-work-link" href={job.related.href}>
-                    See {job.related.title}<span class="experience-work-arrow" aria-hidden="true">→</span>
-                  </a>
+                {job.related.length > 0 && (
+                  <p class="experience-work-links">
+                    {job.related.map((item) => (
+                      <a class="experience-work-link" href={item.href}>
+                        See {item.title}<span class="experience-work-arrow" aria-hidden="true">→</span>
+                      </a>
+                    ))}
+                  </p>
                 )}
               </details>
             </li>
@@ -352,9 +356,22 @@ const experience = [
       const index = document.querySelector(".content-index");
       if (!index) return;
       index.querySelectorAll("[data-linked]").forEach((el) => el.removeAttribute("data-linked"));
-      const key = source?.getAttribute("data-link");
-      const matches = key ? [...index.querySelectorAll(`[data-link="${CSS.escape(key)}"]`)] : [];
-      const linking = matches.length > 1;
+      // A role's data-link can list several work slugs, so match on any shared slug.
+      const keys = source?.getAttribute("data-link")?.split(" ") ?? [];
+      const matches = new Set(keys.flatMap((key) => [...index.querySelectorAll(`[data-link~="${CSS.escape(key)}"]`)]));
+      // While collapsed, any entry hidden behind More lights the More row, which flips to that entry's title.
+      const moreRow = index.querySelector<HTMLElement>(".more-row-link[data-more-row]");
+      const peek = moreRow?.querySelector(".more-row-peek");
+      if (moreRow && peek) {
+        const hidden = [...matches].find((el) => el.closest("li[hidden]"));
+        if (!matches.has(moreRow) && hidden) {
+          matches.add(moreRow);
+          peek.textContent = hidden.querySelector(".link-title")?.textContent ?? "";
+        } else {
+          peek.textContent = moreRow.dataset.title ?? "";
+        }
+      }
+      const linking = matches.size > 1;
       index.toggleAttribute("data-linking", linking);
       if (linking) matches.forEach((el) => el.setAttribute("data-linked", ""));
     }
