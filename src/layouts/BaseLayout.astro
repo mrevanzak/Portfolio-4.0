@@ -635,7 +635,9 @@ const beaconToken = import.meta.env.PUBLIC_CF_BEACON_TOKEN;
           delete ui.shell.dataset.expanded;
           ui.hide.forEach((el) => {
             el.inert = false;
-            el.animate([{ opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)" }], timed(500, 450, OUT_QUAD));
+            // Drop the held fill once done: a lingering filter leaves WebKit painting a stale blurred layer.
+            el.animate([{ opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)" }], timed(500, 450, OUT_QUAD))
+              .finished.then((a) => a.cancel(), () => {});
           });
           ui.section.animate([{ transform: `translateY(${fromY - ui.section.getBoundingClientRect().top}px)` }, { transform: "none" }], timed(500, 350, SLIDE));
 
