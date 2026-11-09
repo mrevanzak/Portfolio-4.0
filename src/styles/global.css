@@ -726,6 +726,18 @@ h1 {
   line-height: 1.6;
 }
 
+.detail-body p a {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms ease;
+}
+
+:root:not(.hover-cold) .detail-body p a:hover {
+  text-decoration-color: currentColor;
+}
+
 .detail-body figcaption {
   color: var(--secondary);
 }

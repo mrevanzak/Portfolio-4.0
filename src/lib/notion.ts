@@ -123,8 +123,12 @@ function normalizeBlocks(blocks: BlockObjectResponse[]): DetailBlock[] {
   for (const block of blocks) {
     if (block.type === "paragraph") {
       flushList();
-      const text = richTextToText(block.paragraph.rich_text);
-      if (text) normalized.push({ type: "paragraph", text });
+      const richText = block.paragraph.rich_text;
+      const text = richTextToText(richText);
+      const parts = richText.some((part) => part.href)
+        ? richText.map((part) => ({ text: part.plain_text, href: part.href ?? undefined }))
+        : undefined;
+      if (text) normalized.push({ type: "paragraph", text, parts });
       continue;
     }
 

@@ -3,7 +3,8 @@ import { getNotionItems } from "./notion";
 export type PortfolioKind = "work" | "writing";
 
 export type DetailBlock =
-  | { type: "paragraph"; text: string }
+  // `parts` is only set when the paragraph has links; `text` stays the plain version.
+  | { type: "paragraph"; text: string; parts?: { text: string; href?: string }[] }
   | { type: "heading"; level: 2 | 3; text: string }
   | { type: "bulleted-list"; items: string[] }
   | { type: "numbered-list"; items: string[] }

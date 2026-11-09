@@ -61,7 +61,11 @@ const heroImage = item.images?.[0];
         {blocks.map((block: DetailBlock, index) => (
           <>
             {block.type === "paragraph" && (
-              <p class="detail-block" style={`--item-delay: ${index * 70}ms`}>{block.text}</p>
+              <p class="detail-block" style={`--item-delay: ${index * 70}ms`}>
+                {block.parts
+                  ? block.parts.map((part) => (part.href ? <a href={part.href} target="_blank" rel="noreferrer">{part.text}</a> : part.text))
+                  : block.text}
+              </p>
             )}
 
             {block.type === "heading" && block.level === 2 && (
