@@ -76,7 +76,9 @@ const lastIndex = contributions.days.length - 1;
       document.activeElement instanceof HTMLElement && grid.contains(document.activeElement)
         ? document.activeElement
         : null;
-    const roving = focused ?? grid.querySelector<HTMLElement>('.github-cell[tabindex="0"]');
+    const roving = focused ?? (grid.hasAttribute("data-user-roving")
+      ? grid.querySelector<HTMLElement>('.github-cell[tabindex="0"]')
+      : null);
     const rovingIso = roving?.dataset.iso ?? null;
 
     const existing = grid.children;
@@ -309,6 +311,7 @@ const lastIndex = contributions.days.length - 1;
     }
 
     function setRovingFocus(next: HTMLElement) {
+      grid!.setAttribute("data-user-roving", "");
       const prev = grid!.querySelector<HTMLElement>('.github-cell[tabindex="0"]');
       if (prev && prev !== next) prev.tabIndex = -1;
       next.tabIndex = 0;
@@ -417,6 +420,8 @@ const lastIndex = contributions.days.length - 1;
           activateCell(cell, "pointer");
           window.clearTimeout(touchHideTimer);
           touchHideTimer = window.setTimeout(clearActive, 2200);
+        } else if (activeCell !== cell) {
+          activateCell(cell, "pointer");
         }
       },
       { signal }
@@ -476,17 +481,21 @@ const lastIndex = contributions.days.length - 1;
       { signal }
     );
 
+    document.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key === "Escape" && activeCell) {
+          clearActive();
+        }
+      },
+      { signal }
+    );
+
     grid.addEventListener(
       "keydown",
       (event) => {
         const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
         if (!cell) return;
-
-        if (event.key === "Escape" && activeCell) {
-          event.preventDefault();
-          clearActive();
-          return;
-        }
 
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
