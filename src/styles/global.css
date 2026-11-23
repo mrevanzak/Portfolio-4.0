@@ -15,6 +15,11 @@
   --shadow: #0a0c6b66;
   --glow: #5179ff;
   --wash: #3138f5;
+  --gh-0: #ffffff0c;
+  --gh-1: #ffffff1f;
+  --gh-2: #ffffff38;
+  --gh-3: #ffffff5e;
+  --gh-4: #e6f83a;
   --sky:
     radial-gradient(ellipse 46rem 30rem at 50% 14rem, var(--glow), transparent 70%),
     linear-gradient(180deg, var(--wash), transparent 60rem);
@@ -94,6 +99,36 @@
   initial-value: 0;
 }
 
+@property --gh-0 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --gh-1 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --gh-2 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --gh-3 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@property --gh-4 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 :root[data-theme-switching] {
   transition:
     --surface 600ms var(--ease-out-quint),
@@ -103,7 +138,12 @@
     --shadow 600ms var(--ease-out-quint),
     --glow 600ms var(--ease-out-quint),
     --wash 600ms var(--ease-out-quint),
-    --dark 600ms var(--ease-out-quint);
+    --dark 600ms var(--ease-out-quint),
+    --gh-0 600ms var(--ease-out-quint),
+    --gh-1 600ms var(--ease-out-quint),
+    --gh-2 600ms var(--ease-out-quint),
+    --gh-3 600ms var(--ease-out-quint),
+    --gh-4 600ms var(--ease-out-quint);
 }
 
 /* Night follows the system unless the toggle pinned a theme (data-theme on <html>). */
@@ -117,6 +157,11 @@
     --shadow: #00000080;
     --glow: #2a2fe8a6;
     --wash: #3138f500;
+    --gh-0: #ffffff0a;
+    --gh-1: #ffffff1a;
+    --gh-2: #ffffff30;
+    --gh-3: #ffffff52;
+    --gh-4: #e6f83a;
   }
 }
 
@@ -129,6 +174,11 @@
   --shadow: #00000080;
   --glow: #2a2fe8a6;
   --wash: #3138f500;
+  --gh-0: #ffffff0a;
+  --gh-1: #ffffff1a;
+  --gh-2: #ffffff30;
+  --gh-3: #ffffff52;
+  --gh-4: #e6f83a;
 }
 
 * {
@@ -160,6 +210,7 @@ body {
   min-height: 100vh;
   margin: 0;
   background: var(--sky), var(--surface);
+  overflow-x: clip;
 }
 
 /* White pills carry their own cobalt ink, like GO Club's "+ Add" buttons. */
@@ -188,6 +239,12 @@ a {
   min-height: 100vh;
   margin: 0 auto;
   padding: clamp(58px, 13vh, 118px) 0 clamp(44px, 10vh, 84px);
+}
+
+.page-shell:has(> .site-footer):not([data-expanded]) {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
 }
 
 .detail-shell {
@@ -2053,12 +2110,22 @@ h2 {
 }
 
 .site-footer {
-  margin-top: 56px;
+  margin-top: auto;
+  padding-top: 56px;
   font-size: 13px;
   color: var(--secondary);
 }
 
-.site-footer p {
+.site-footer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 20px;
+  padding-top: 24px;
+}
+
+.site-footer-meta p {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -2066,7 +2133,11 @@ h2 {
   margin: 0;
 }
 
-.site-footer a {
+.site-footer-github {
+  font-variant-numeric: tabular-nums;
+}
+
+.site-footer-meta a {
   display: inline-flex;
   gap: 2px;
   color: var(--primary);
@@ -2084,31 +2155,263 @@ h2 {
     transform 320ms var(--ease-out-expo);
 }
 
-:root:not(.hover-cold) .site-footer a:hover,
-.site-footer a:focus-visible {
+:root:not(.hover-cold) .site-footer-meta a:hover,
+.site-footer-meta a:focus-visible {
   color: var(--heading);
 }
 
-:root:not(.hover-cold) .site-footer a:hover .footer-arrow,
-.site-footer a:focus-visible .footer-arrow {
+:root:not(.hover-cold) .site-footer-meta a:hover .footer-arrow,
+.site-footer-meta a:focus-visible .footer-arrow {
   opacity: 1;
   transform: translate(2px, -2px);
 }
 
 /* Same focus trick as the work list: siblings soften while one link is hovered. */
-:root:not(.hover-cold) .site-footer p:has(a:hover) a:not(:hover),
-.site-footer p:has(a:focus-visible) a:not(:focus-visible) {
+:root:not(.hover-cold) .site-footer-meta:has(a:hover) a:not(:hover),
+.site-footer-meta:has(a:focus-visible) a:not(:focus-visible) {
   opacity: 0.42;
   filter: blur(calc(var(--hover-blur) * 0.6));
 }
 
-.site-footer a:active {
+.site-footer-meta a:active {
   scale: 0.96;
+}
+
+.github-activity-wrap {
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  margin-top: calc(clamp(32px, 5vh, 52px) - 8px);
+  padding-top: 8px;
+  overflow: clip;
+}
+
+.github-activity {
+  display: block;
+}
+
+.github-grid {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-columns: minmax(0, 1fr);
+  gap: clamp(2px, 0.25vw, 3.5px);
+  padding: 0 clamp(2px, 0.25vw, 3.5px) clamp(2px, 0.25vw, 3.5px);
+  overflow-x: clip;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.github-cell {
+  display: block;
+  min-width: 0;
+  aspect-ratio: 1;
+  border-radius: clamp(2px, 0.28vw, 4px);
+  background: var(--gh-0);
+  cursor: pointer;
+}
+
+.github-cell[data-level="1"] {
+  background: var(--gh-1);
+}
+
+.github-cell[data-level="2"] {
+  background: var(--gh-2);
+}
+
+.github-cell[data-level="3"] {
+  background: var(--gh-3);
+}
+
+.github-cell[data-level="4"] {
+  background: var(--gh-4);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .github-cell {
+    transition:
+      background-color 420ms var(--ease-out-quint),
+      transform 260ms var(--stagger-ease),
+      filter 260ms var(--ease-out-quint),
+      box-shadow 260ms var(--ease-out-quint);
+  }
+
+  .github-cell[data-prox] {
+    transform: scale(calc(1 + var(--prox, 0) * 0.14));
+    filter: brightness(calc(1 + var(--prox, 0) * 0.3));
+  }
+
+  .github-cell[data-active] {
+    position: relative;
+    z-index: 3;
+    background: var(--accent);
+    transform: scale(1.24);
+    box-shadow: 0 0 14px -2px color-mix(in oklch, var(--accent), transparent 35%);
+    transition:
+      background-color 70ms ease-out,
+      transform 220ms var(--stagger-ease),
+      box-shadow 140ms ease-out;
+  }
+
+  .github-cell[data-active][data-level="4"] {
+    background: var(--heading);
+    box-shadow: 0 0 0 1.5px var(--accent), 0 0 16px -2px color-mix(in oklch, var(--accent), transparent 25%);
+  }
+}
+
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .github-activity-wrap[data-reveal="armed"] .github-cell {
+    opacity: 0;
+    transform: translateY(16px) scale(0.52) rotate(-5deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .github-activity-wrap[data-reveal="running"] .github-cell {
+    animation: github-cell-rise calc(520ms * var(--speed)) var(--ease-out-quint) both;
+    animation-delay: calc(
+      (var(--col, 0) * 11ms + var(--row, 0) * 22ms + var(--jitter, 0) * 9ms) * var(--speed)
+    );
+  }
+
+  .github-activity-wrap[data-reveal="running"] .github-cell[data-level="4"] {
+    animation-name: github-spark-rise;
+    animation-delay: calc(
+      (var(--col, 0) * 11ms + var(--row, 0) * 22ms + var(--jitter, 0) * 9ms + 110ms) * var(--speed)
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .github-cell[data-active] {
+    position: relative;
+    z-index: 2;
+    outline: 1.5px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+@keyframes github-cell-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.52) rotate(-5deg);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1.06) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes github-spark-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.35) rotate(-8deg);
+    box-shadow: 0 0 0 0 transparent;
+  }
+  56% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.18) rotate(2deg);
+    box-shadow: 0 0 18px 0 color-mix(in oklch, var(--accent), transparent 20%);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@media (max-width: 680px) {
+  .github-cell {
+    aspect-ratio: 1 / 1.25;
+    border-radius: 2px;
+  }
+}
+
+.github-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 80;
+  max-width: calc(100vw - 24px);
+  padding: 8px 11px;
+  border: 1px solid color-mix(in oklch, var(--heading), transparent 84%);
+  border-radius: 12px;
+  background: color-mix(in oklch, #07093a 90%, var(--surface));
+  box-shadow: 0 12px 30px -6px var(--shadow);
+  color: var(--heading);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 140ms var(--ease-out-quint);
+}
+
+.github-tooltip[data-glide] {
+  transition:
+    opacity 140ms var(--ease-out-quint),
+    transform 130ms var(--ease-out-quint);
+}
+
+.github-tooltip[data-open] {
+  opacity: 1;
+}
+
+.github-tooltip-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.github-tooltip-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 2.5px;
+  background: var(--gh-0);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--heading), transparent 78%);
+}
+
+.github-tooltip-dot[data-level="1"] {
+  background: var(--gh-1);
+}
+
+.github-tooltip-dot[data-level="2"] {
+  background: var(--gh-2);
+}
+
+.github-tooltip-dot[data-level="3"] {
+  background: var(--gh-3);
+}
+
+.github-tooltip-dot[data-level="4"] {
+  background: var(--gh-4);
+  box-shadow: none;
+}
+
+.github-tooltip strong {
+  display: block;
+  font-weight: 700;
+}
+
+.github-tooltip-date {
+  display: block;
+  margin-top: 2px;
+  padding-left: 15px;
+  color: var(--secondary);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .footer-arrow {
     transform: none !important;
+  }
+
+  .github-tooltip[data-glide] {
+    transition: opacity 120ms ease;
   }
 }
 

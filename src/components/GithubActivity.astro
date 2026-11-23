@@ -1,0 +1,398 @@
+---
+import type { GithubContributions } from "../lib/github";
+
+interface Props {
+  contributions: GithubContributions;
+}
+
+const { contributions } = Astro.props;
+const formattedTotal = contributions.total.toLocaleString("en-US");
+const ariaLabel =
+  contributions.total > 0
+    ? `GitHub contribution heatmap: ${formattedTotal} contributions in the last year.`
+    : "GitHub contribution heatmap.";
+---
+
+<div class="github-activity-wrap" data-github-activity data-reveal="armed" data-github-username={contributions.username}>
+  <div class="github-activity" role="img" aria-label={ariaLabel} data-github-region>
+    <span class="github-grid" aria-hidden="true" data-github-grid>
+      {contributions.days.map((day) => (
+        <span
+          class="github-cell"
+          data-level={day.level}
+          data-count={day.count}
+          data-date={day.label}
+          data-col={day.col}
+          data-row={day.row}
+          style={`grid-column:${day.col + 1};grid-row:${day.row + 1};--col:${day.col};--row:${day.row};--jitter:${(day.col * 7 + day.row * 13) % 5}`}
+        />
+      ))}
+    </span>
+  </div>
+  <div class="github-tooltip" role="tooltip" data-github-tooltip hidden>
+    <span class="github-tooltip-head">
+      <i class="github-tooltip-dot" data-tooltip-dot></i>
+      <strong data-tooltip-count></strong>
+    </span>
+    <span class="github-tooltip-date" data-tooltip-date></span>
+  </div>
+</div>
+
+<script>
+  import { normalizeApiContributions, type ContributionDay } from "../lib/github";
+
+  const CACHE_TTL_MS = 15 * 60_000;
+  const PROX_RADIUS = 2.6;
+  const RIPPLE_RADIUS = 26;
+  let cleanup: (() => void) | null = null;
+
+  function applyLiveContributions(
+    grid: HTMLElement,
+    region: HTMLElement | null,
+    total: number,
+    days: ContributionDay[]
+  ) {
+    const existing = grid.children;
+    if (existing.length === days.length) {
+      for (let i = 0; i < days.length; i++) {
+        const cell = existing[i] as HTMLElement;
+        const day = days[i];
+        cell.dataset.level = String(day.level);
+        cell.dataset.count = String(day.count);
+        cell.dataset.date = day.label;
+        cell.dataset.col = String(day.col);
+        cell.dataset.row = String(day.row);
+        cell.style.gridColumn = String(day.col + 1);
+        cell.style.gridRow = String(day.row + 1);
+        cell.style.setProperty("--col", String(day.col));
+        cell.style.setProperty("--row", String(day.row));
+        cell.style.setProperty("--jitter", String((day.col * 7 + day.row * 13) % 5));
+      }
+    } else {
+      const fragment = document.createDocumentFragment();
+      for (const day of days) {
+        const cell = document.createElement("span");
+        cell.className = "github-cell";
+        cell.dataset.level = String(day.level);
+        cell.dataset.count = String(day.count);
+        cell.dataset.date = day.label;
+        cell.dataset.col = String(day.col);
+        cell.dataset.row = String(day.row);
+        cell.style.gridColumn = String(day.col + 1);
+        cell.style.gridRow = String(day.row + 1);
+        cell.style.setProperty("--col", String(day.col));
+        cell.style.setProperty("--row", String(day.row));
+        cell.style.setProperty("--jitter", String((day.col * 7 + day.row * 13) % 5));
+        fragment.append(cell);
+      }
+      grid.replaceChildren(fragment);
+    }
+
+    const formatted = total.toLocaleString("en-US");
+    if (region) {
+      region.setAttribute(
+        "aria-label",
+        total > 0
+          ? `GitHub contribution heatmap: ${formatted} contributions in the last year.`
+          : "GitHub contribution heatmap."
+      );
+    }
+
+    const totalEl = document.querySelector<HTMLElement>("[data-github-total]");
+    if (totalEl && total > 0) {
+      totalEl.textContent = `${formatted} on GitHub`;
+    }
+  }
+
+  async function refreshContributions(
+    username: string,
+    grid: HTMLElement,
+    region: HTMLElement | null,
+    signal: AbortSignal,
+    onUpdated: () => void
+  ) {
+    const cacheKey = `gh-contrib:${username}`;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as { at: number; total: number; days: ContributionDay[] };
+        if (Date.now() - parsed.at < CACHE_TTL_MS && Array.isArray(parsed.days) && parsed.days.length) {
+          applyLiveContributions(grid, region, parsed.total, parsed.days);
+          onUpdated();
+          return;
+        }
+      }
+    } catch {}
+
+    try {
+      const res = await fetch(
+        `https://github-contributions-api.jogruber.de/v4/${encodeURIComponent(username)}?y=last`,
+        { signal }
+      );
+      if (!res.ok) return;
+      const json = (await res.json()) as {
+        total?: { lastYear?: number };
+        contributions?: Array<{ date: string; count: number; level: number }>;
+      };
+      if (signal.aborted || !Array.isArray(json.contributions)) return;
+      const normalized = normalizeApiContributions(json.contributions, json.total?.lastYear);
+      if (!normalized) return;
+
+      applyLiveContributions(grid, region, normalized.total, normalized.days);
+      onUpdated();
+      try {
+        sessionStorage.setItem(
+          cacheKey,
+          JSON.stringify({ at: Date.now(), total: normalized.total, days: normalized.days })
+        );
+      } catch {}
+    } catch {}
+  }
+
+  function setupGithubActivity() {
+    cleanup?.();
+    cleanup = null;
+
+    const wrap = document.querySelector<HTMLElement>("[data-github-activity]");
+    const region = wrap?.querySelector<HTMLElement>("[data-github-region]") ?? null;
+    const grid = wrap?.querySelector<HTMLElement>("[data-github-grid]");
+    const tooltip = wrap?.querySelector<HTMLElement>("[data-github-tooltip]");
+    const dotEl = tooltip?.querySelector<HTMLElement>("[data-tooltip-dot]");
+    const countEl = tooltip?.querySelector<HTMLElement>("[data-tooltip-count]");
+    const dateEl = tooltip?.querySelector<HTMLElement>("[data-tooltip-date]");
+
+    if (!wrap || !grid || !tooltip || !dotEl || !countEl || !dateEl) return;
+
+    const controller = new AbortController();
+    const { signal } = controller;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const speed = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--speed")) || 1;
+
+    // Spatial index keyed by "col,row" so proximity hover only touches nearby cells.
+    let cellMap = new Map<string, HTMLElement>();
+    let allCells: HTMLElement[] = [];
+
+    function indexCells() {
+      cellMap = new Map();
+      allCells = [...grid!.querySelectorAll<HTMLElement>(".github-cell")];
+      for (const cell of allCells) {
+        cellMap.set(`${cell.dataset.col},${cell.dataset.row}`, cell);
+      }
+    }
+    indexCells();
+
+    const username = wrap.dataset.githubUsername;
+    if (username) {
+      refreshContributions(username, grid, region, signal, indexCells);
+    }
+
+    let observer: IntersectionObserver | null = null;
+    let revealTimer = 0;
+    if ("IntersectionObserver" in window && !reduceMotion.matches) {
+      if (wrap.dataset.reveal !== "done") {
+        wrap.dataset.reveal = "armed";
+        observer = new IntersectionObserver(
+          (entries) => {
+            const entry = entries[0];
+            if (!entry || !entry.isIntersecting) return;
+            observer?.disconnect();
+            observer = null;
+
+            // Wait one paint after arming so a footer already in view still plays cleanly.
+            requestAnimationFrame(() => {
+              if (signal.aborted) return;
+              wrap.dataset.reveal = "running";
+              const totalMs = Math.round((53 * 11 + 6 * 22 + 36 + 110 + 540) * speed());
+              revealTimer = window.setTimeout(() => {
+                if (!signal.aborted && wrap.dataset.reveal === "running") {
+                  wrap.dataset.reveal = "done";
+                }
+              }, totalMs);
+            });
+          },
+          { threshold: 0.15, rootMargin: "0px 0px -24px 0px" }
+        );
+        observer.observe(wrap);
+      }
+    } else {
+      wrap.dataset.reveal = "done";
+    }
+
+    let activeCell: HTMLElement | null = null;
+    let proxCells = new Set<HTMLElement>();
+    let touchHideTimer = 0;
+
+    function clearProximity() {
+      for (const cell of proxCells) {
+        cell.removeAttribute("data-prox");
+        cell.style.removeProperty("--prox");
+      }
+      proxCells.clear();
+    }
+
+    function updateProximity(origin: HTMLElement) {
+      if (reduceMotion.matches) return;
+      const c0 = Number(origin.dataset.col);
+      const r0 = Number(origin.dataset.row);
+      const next = new Set<HTMLElement>();
+      const span = Math.ceil(PROX_RADIUS);
+
+      for (let dc = -span; dc <= span; dc++) {
+        for (let dr = -span; dr <= span; dr++) {
+          if (dc === 0 && dr === 0) continue;
+          const dist = Math.hypot(dc, dr);
+          if (dist > PROX_RADIUS) continue;
+          const neighbor = cellMap.get(`${c0 + dc},${r0 + dr}`);
+          if (!neighbor) continue;
+          const strength = (1 - dist / PROX_RADIUS) ** 1.5;
+          neighbor.setAttribute("data-prox", "");
+          neighbor.style.setProperty("--prox", strength.toFixed(3));
+          next.add(neighbor);
+        }
+      }
+
+      for (const prev of proxCells) {
+        if (!next.has(prev)) {
+          prev.removeAttribute("data-prox");
+          prev.style.removeProperty("--prox");
+        }
+      }
+      proxCells = next;
+    }
+
+    function positionTooltip(cell: HTMLElement, glide: boolean) {
+      tooltip!.toggleAttribute("data-glide", glide);
+      const rect = cell.getBoundingClientRect();
+      const tip = tooltip!.getBoundingClientRect();
+      const pad = 12;
+      const x = Math.min(
+        Math.max(rect.left + rect.width / 2 - tip.width / 2, pad),
+        window.innerWidth - tip.width - pad
+      );
+      const y = Math.max(rect.top - tip.height - 12, pad);
+      tooltip!.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+    }
+
+    function activateCell(cell: HTMLElement) {
+      const wasOpen = Boolean(activeCell);
+      if (activeCell && activeCell !== cell) {
+        activeCell.removeAttribute("data-active");
+      }
+      activeCell = cell;
+      cell.setAttribute("data-active", "");
+      updateProximity(cell);
+
+      const count = Number(cell.dataset.count ?? 0);
+      const date = cell.dataset.date ?? "";
+      dotEl!.dataset.level = cell.dataset.level ?? "0";
+      countEl!.textContent =
+        count === 0
+          ? "No contributions"
+          : `${count.toLocaleString("en-US")} ${count === 1 ? "contribution" : "contributions"}`;
+      dateEl!.textContent = date;
+      tooltip!.hidden = false;
+      positionTooltip(cell, wasOpen);
+      tooltip!.dataset.open = "";
+    }
+
+    function clearActive() {
+      window.clearTimeout(touchHideTimer);
+      if (activeCell) {
+        activeCell.removeAttribute("data-active");
+        activeCell = null;
+      }
+      clearProximity();
+      tooltip!.hidden = true;
+      tooltip!.removeAttribute("data-open");
+      tooltip!.removeAttribute("data-glide");
+    }
+
+    function triggerRipple(origin: HTMLElement) {
+      if (reduceMotion.matches) return;
+      const c0 = Number(origin.dataset.col);
+      const r0 = Number(origin.dataset.row);
+      const mult = speed();
+
+      for (const cell of allCells) {
+        const dc = Number(cell.dataset.col) - c0;
+        const dr = Number(cell.dataset.row) - r0;
+        const dist = Math.hypot(dc, dr);
+        if (dist > RIPPLE_RADIUS) continue;
+
+        const falloff = 1 - dist / RIPPLE_RADIUS;
+        const peakScale = 1 + 0.28 * falloff;
+        const delay = dist * 16 * mult;
+        const glow = Math.max(0, 1 - dist / 14);
+
+        const midFrame: Keyframe = {
+          transform: `scale(${peakScale.toFixed(3)})`,
+          offset: 0.32
+        };
+        if (glow > 0.05) {
+          const pct = Math.round(glow * glow * 88);
+          midFrame.backgroundColor = `color-mix(in srgb, var(--accent) ${pct}%, var(--gh-${cell.dataset.level ?? 0}))`;
+        } else {
+          midFrame.filter = `brightness(${(1 + 0.4 * falloff).toFixed(2)})`;
+        }
+
+        cell.animate(
+          [{ transform: "scale(1)" }, midFrame, { transform: "scale(1)" }],
+          {
+            duration: 460 * mult,
+            delay,
+            easing: "cubic-bezier(0.34, 1.35, 0.64, 1)"
+          }
+        );
+      }
+    }
+
+    grid.addEventListener(
+      "pointerover",
+      (event) => {
+        if (event.pointerType === "touch") return;
+        if (document.documentElement.classList.contains("hover-cold")) return;
+        const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
+        if (!cell || cell === activeCell) return;
+        activateCell(cell);
+      },
+      { signal }
+    );
+
+    grid.addEventListener(
+      "pointerdown",
+      (event) => {
+        const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
+        if (!cell) return;
+        triggerRipple(cell);
+        if (event.pointerType === "touch") {
+          activateCell(cell);
+          window.clearTimeout(touchHideTimer);
+          touchHideTimer = window.setTimeout(clearActive, 2200);
+        }
+      },
+      { signal }
+    );
+
+    grid.addEventListener("pointerleave", clearActive, { signal });
+    window.addEventListener("scroll", clearActive, { passive: true, signal });
+    window.addEventListener("resize", clearActive, { passive: true, signal });
+
+    cleanup = () => {
+      window.clearTimeout(revealTimer);
+      observer?.disconnect();
+      controller.abort();
+      clearActive();
+    };
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupGithubActivity, { once: true });
+  } else {
+    setupGithubActivity();
+  }
+  document.addEventListener("astro:page-load", setupGithubActivity);
+  document.addEventListener("astro:before-swap", () => {
+    cleanup?.();
+    cleanup = null;
+  });
+</script>
