@@ -2209,6 +2209,13 @@ h2 {
   cursor: pointer;
 }
 
+.github-cell:focus-visible {
+  position: relative;
+  z-index: 4;
+  outline: 2px solid var(--heading);
+  outline-offset: 1.5px;
+}
+
 .github-cell[data-level="1"] {
   background: var(--gh-1);
 }
