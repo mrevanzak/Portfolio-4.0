@@ -23,6 +23,7 @@ const lastIndex = contributions.days.length - 1;
           role="button"
           tabindex={index === lastIndex ? 0 : -1}
           aria-label={formatDayAriaLabel(day.count, day.label)}
+          data-iso={day.date}
           data-level={day.level}
           data-count={day.count}
           data-date={day.label}
@@ -55,59 +56,59 @@ const lastIndex = contributions.days.length - 1;
   const RIPPLE_RADIUS = 26;
   let cleanup: (() => void) | null = null;
 
+  function applyDayAttributes(cell: HTMLElement, day: ContributionDay) {
+    cell.setAttribute("aria-label", formatDayAriaLabel(day.count, day.label));
+    cell.dataset.iso = day.date;
+    cell.dataset.level = String(day.level);
+    cell.dataset.count = String(day.count);
+    cell.dataset.date = day.label;
+    cell.dataset.col = String(day.col);
+    cell.dataset.row = String(day.row);
+    cell.style.gridColumn = String(day.col + 1);
+    cell.style.gridRow = String(day.row + 1);
+    cell.style.setProperty("--col", String(day.col));
+    cell.style.setProperty("--row", String(day.row));
+    cell.style.setProperty("--jitter", String((day.col * 7 + day.row * 13) % 5));
+  }
+
   function applyLiveContributions(grid: HTMLElement, total: number, days: ContributionDay[]) {
-    const focused = document.activeElement instanceof HTMLElement && grid.contains(document.activeElement)
-      ? document.activeElement
-      : null;
+    const focused =
+      document.activeElement instanceof HTMLElement && grid.contains(document.activeElement)
+        ? document.activeElement
+        : null;
     const roving = focused ?? grid.querySelector<HTMLElement>('.github-cell[tabindex="0"]');
-    const rovingKey = roving ? `${roving.dataset.col},${roving.dataset.row}` : null;
+    const rovingIso = roving?.dataset.iso ?? null;
 
     const existing = grid.children;
+    let matchedRoving: HTMLElement | null = null;
+
     if (existing.length === days.length) {
       for (let i = 0; i < days.length; i++) {
         const cell = existing[i] as HTMLElement;
         const day = days[i];
-        cell.setAttribute("aria-label", formatDayAriaLabel(day.count, day.label));
-        cell.dataset.level = String(day.level);
-        cell.dataset.count = String(day.count);
-        cell.dataset.date = day.label;
-        cell.dataset.col = String(day.col);
-        cell.dataset.row = String(day.row);
-        cell.style.gridColumn = String(day.col + 1);
-        cell.style.gridRow = String(day.row + 1);
-        cell.style.setProperty("--col", String(day.col));
-        cell.style.setProperty("--row", String(day.row));
-        cell.style.setProperty("--jitter", String((day.col * 7 + day.row * 13) % 5));
+        cell.tabIndex = -1;
+        applyDayAttributes(cell, day);
+        if (rovingIso && day.date === rovingIso) matchedRoving = cell;
       }
     } else {
       const fragment = document.createDocumentFragment();
-      let matchedRoving: HTMLElement | null = null;
       for (const day of days) {
         const cell = document.createElement("span");
         cell.className = "github-cell";
         cell.setAttribute("role", "button");
         cell.tabIndex = -1;
-        cell.setAttribute("aria-label", formatDayAriaLabel(day.count, day.label));
-        cell.dataset.level = String(day.level);
-        cell.dataset.count = String(day.count);
-        cell.dataset.date = day.label;
-        cell.dataset.col = String(day.col);
-        cell.dataset.row = String(day.row);
-        cell.style.gridColumn = String(day.col + 1);
-        cell.style.gridRow = String(day.row + 1);
-        cell.style.setProperty("--col", String(day.col));
-        cell.style.setProperty("--row", String(day.row));
-        cell.style.setProperty("--jitter", String((day.col * 7 + day.row * 13) % 5));
-        if (rovingKey && `${day.col},${day.row}` === rovingKey) {
-          matchedRoving = cell;
-        }
+        applyDayAttributes(cell, day);
+        if (rovingIso && day.date === rovingIso) matchedRoving = cell;
         fragment.append(cell);
       }
       grid.replaceChildren(fragment);
-      const nextRoving = matchedRoving ?? (grid.lastElementChild as HTMLElement | null);
-      if (nextRoving) {
-        nextRoving.tabIndex = 0;
-        if (focused) nextRoving.focus({ preventScroll: true });
+    }
+
+    const nextRoving = matchedRoving ?? (grid.lastElementChild as HTMLElement | null);
+    if (nextRoving) {
+      nextRoving.tabIndex = 0;
+      if (focused && document.activeElement !== nextRoving) {
+        nextRoving.focus({ preventScroll: true });
       }
     }
 
@@ -191,6 +192,20 @@ const lastIndex = contributions.days.length - 1;
     let cellMap = new Map<string, HTMLElement>();
     let allCells: HTMLElement[] = [];
 
+    let activeCell: HTMLElement | null = null;
+    let activeSource: "pointer" | "focus" | null = null;
+    let proxCells = new Set<HTMLElement>();
+    let touchHideTimer = 0;
+    let lastPointerDownAt = 0;
+
+    function updateTooltipContent(cell: HTMLElement) {
+      const count = Number(cell.dataset.count ?? 0);
+      const date = cell.dataset.date ?? "";
+      dotEl!.dataset.level = cell.dataset.level ?? "0";
+      countEl!.textContent = formatContributionCount(count);
+      dateEl!.textContent = date;
+    }
+
     function indexCells() {
       cellMap = new Map();
       allCells = [...grid!.querySelectorAll<HTMLElement>(".github-cell")];
@@ -201,18 +216,6 @@ const lastIndex = contributions.days.length - 1;
         if (grid!.contains(activeCell)) updateTooltipContent(activeCell);
         else clearActive();
       }
-    }
-
-    let activeCell: HTMLElement | null = null;
-    let proxCells = new Set<HTMLElement>();
-    let touchHideTimer = 0;
-
-    function updateTooltipContent(cell: HTMLElement) {
-      const count = Number(cell.dataset.count ?? 0);
-      const date = cell.dataset.date ?? "";
-      dotEl!.dataset.level = cell.dataset.level ?? "0";
-      countEl!.textContent = formatContributionCount(count);
-      dateEl!.textContent = date;
     }
 
     indexCells();
@@ -311,12 +314,13 @@ const lastIndex = contributions.days.length - 1;
       next.tabIndex = 0;
     }
 
-    function activateCell(cell: HTMLElement) {
+    function activateCell(cell: HTMLElement, source: "pointer" | "focus") {
       const wasOpen = Boolean(activeCell);
       if (activeCell && activeCell !== cell) {
         activeCell.removeAttribute("data-active");
       }
       activeCell = cell;
+      activeSource = source;
       cell.setAttribute("data-active", "");
       updateProximity(cell);
       updateTooltipContent(cell);
@@ -331,10 +335,23 @@ const lastIndex = contributions.days.length - 1;
         activeCell.removeAttribute("data-active");
         activeCell = null;
       }
+      activeSource = null;
       clearProximity();
       tooltip!.hidden = true;
       tooltip!.removeAttribute("data-open");
       tooltip!.removeAttribute("data-glide");
+    }
+
+    function handleViewportMove() {
+      if (!activeCell) return;
+      if (activeSource === "focus" && document.activeElement === activeCell) {
+        const rect = activeCell.getBoundingClientRect();
+        if (rect.bottom > 0 && rect.top < window.innerHeight) {
+          positionTooltip(activeCell, false);
+          return;
+        }
+      }
+      clearActive();
     }
 
     function triggerRipple(origin: HTMLElement) {
@@ -383,7 +400,7 @@ const lastIndex = contributions.days.length - 1;
         if (document.documentElement.classList.contains("hover-cold")) return;
         const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
         if (!cell || cell === activeCell) return;
-        activateCell(cell);
+        activateCell(cell, "pointer");
       },
       { signal }
     );
@@ -393,13 +410,28 @@ const lastIndex = contributions.days.length - 1;
       (event) => {
         const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
         if (!cell) return;
+        lastPointerDownAt = performance.now();
         setRovingFocus(cell);
         triggerRipple(cell);
         if (event.pointerType === "touch") {
-          activateCell(cell);
+          activateCell(cell, "pointer");
           window.clearTimeout(touchHideTimer);
           touchHideTimer = window.setTimeout(clearActive, 2200);
         }
+      },
+      { signal }
+    );
+
+    // Assistive tech that activates role="button" via click without pointerdown.
+    grid.addEventListener(
+      "click",
+      (event) => {
+        if (event.detail > 0 && performance.now() - lastPointerDownAt < 500) return;
+        const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
+        if (!cell) return;
+        setRovingFocus(cell);
+        activateCell(cell, "focus");
+        triggerRipple(cell);
       },
       { signal }
     );
@@ -425,10 +457,11 @@ const lastIndex = contributions.days.length - 1;
     grid.addEventListener(
       "focusin",
       (event) => {
+        if (performance.now() - lastPointerDownAt < 100) return;
         const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
         if (!cell) return;
         setRovingFocus(cell);
-        activateCell(cell);
+        activateCell(cell, "focus");
       },
       { signal }
     );
@@ -449,8 +482,15 @@ const lastIndex = contributions.days.length - 1;
         const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
         if (!cell) return;
 
+        if (event.key === "Escape" && activeCell) {
+          event.preventDefault();
+          clearActive();
+          return;
+        }
+
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
+          activateCell(cell, "focus");
           triggerRipple(cell);
           return;
         }
@@ -476,8 +516,8 @@ const lastIndex = contributions.days.length - 1;
       { signal }
     );
 
-    window.addEventListener("scroll", clearActive, { passive: true, signal });
-    window.addEventListener("resize", clearActive, { passive: true, signal });
+    window.addEventListener("scroll", handleViewportMove, { passive: true, signal });
+    window.addEventListener("resize", handleViewportMove, { passive: true, signal });
 
     cleanup = () => {
       window.clearTimeout(revealTimer);
