@@ -18,6 +18,7 @@ export interface GithubContributions {
 }
 
 const DEFAULT_USERNAME = "mrevanzak";
+const FETCH_TIMEOUT_MS = 5000;
 const cache = new Map<string, Promise<GithubContributions>>();
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -30,6 +31,15 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 export function formatDateLabel(isoDate: string): string {
   const parsed = new Date(`${isoDate}T00:00:00Z`);
   return Number.isNaN(parsed.getTime()) ? isoDate : dateFormatter.format(parsed);
+}
+
+export function formatContributionCount(count: number): string {
+  if (count === 0) return "No contributions";
+  return `${count.toLocaleString("en-US")} ${count === 1 ? "contribution" : "contributions"}`;
+}
+
+export function formatDayAriaLabel(count: number, dateLabel: string): string {
+  return `${formatContributionCount(count)} on ${dateLabel}`;
 }
 
 export function assignQuantileLevels(days: ContributionDay[]) {
@@ -186,6 +196,7 @@ function createFallbackContributions(username: string): GithubContributions {
 async function fetchContributions(username: string): Promise<GithubContributions> {
   try {
     const response = await fetch(`https://github.com/users/${encodeURIComponent(username)}/contributions`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: {
         Accept: "text/html",
         "User-Agent": "rvnza-portfolio-build"

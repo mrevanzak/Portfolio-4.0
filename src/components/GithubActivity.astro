@@ -1,5 +1,5 @@
 ---
-import type { GithubContributions } from "../lib/github";
+import { formatDayAriaLabel, type GithubContributions } from "../lib/github";
 
 interface Props {
   contributions: GithubContributions;
@@ -9,16 +9,20 @@ const { contributions } = Astro.props;
 const formattedTotal = contributions.total.toLocaleString("en-US");
 const ariaLabel =
   contributions.total > 0
-    ? `GitHub contribution heatmap: ${formattedTotal} contributions in the last year.`
-    : "GitHub contribution heatmap.";
+    ? `GitHub contribution heatmap: ${formattedTotal} contributions in the last year. Use arrow keys to inspect days.`
+    : "GitHub contribution heatmap. Use arrow keys to inspect days.";
+const lastIndex = contributions.days.length - 1;
 ---
 
 <div class="github-activity-wrap" data-github-activity data-reveal="armed" data-github-username={contributions.username}>
-  <div class="github-activity" role="img" aria-label={ariaLabel} data-github-region>
-    <span class="github-grid" aria-hidden="true" data-github-grid>
-      {contributions.days.map((day) => (
+  <div class="github-activity">
+    <div class="github-grid" role="group" aria-label={ariaLabel} data-github-grid>
+      {contributions.days.map((day, index) => (
         <span
           class="github-cell"
+          role="button"
+          tabindex={index === lastIndex ? 0 : -1}
+          aria-label={formatDayAriaLabel(day.count, day.label)}
           data-level={day.level}
           data-count={day.count}
           data-date={day.label}
@@ -27,7 +31,7 @@ const ariaLabel =
           style={`grid-column:${day.col + 1};grid-row:${day.row + 1};--col:${day.col};--row:${day.row};--jitter:${(day.col * 7 + day.row * 13) % 5}`}
         />
       ))}
-    </span>
+    </div>
   </div>
   <div class="github-tooltip" role="tooltip" data-github-tooltip hidden>
     <span class="github-tooltip-head">
@@ -39,24 +43,31 @@ const ariaLabel =
 </div>
 
 <script>
-  import { normalizeApiContributions, type ContributionDay } from "../lib/github";
+  import {
+    formatContributionCount,
+    formatDayAriaLabel,
+    normalizeApiContributions,
+    type ContributionDay
+  } from "../lib/github";
 
   const CACHE_TTL_MS = 15 * 60_000;
   const PROX_RADIUS = 2.6;
   const RIPPLE_RADIUS = 26;
   let cleanup: (() => void) | null = null;
 
-  function applyLiveContributions(
-    grid: HTMLElement,
-    region: HTMLElement | null,
-    total: number,
-    days: ContributionDay[]
-  ) {
+  function applyLiveContributions(grid: HTMLElement, total: number, days: ContributionDay[]) {
+    const focused = document.activeElement instanceof HTMLElement && grid.contains(document.activeElement)
+      ? document.activeElement
+      : null;
+    const roving = focused ?? grid.querySelector<HTMLElement>('.github-cell[tabindex="0"]');
+    const rovingKey = roving ? `${roving.dataset.col},${roving.dataset.row}` : null;
+
     const existing = grid.children;
     if (existing.length === days.length) {
       for (let i = 0; i < days.length; i++) {
         const cell = existing[i] as HTMLElement;
         const day = days[i];
+        cell.setAttribute("aria-label", formatDayAriaLabel(day.count, day.label));
         cell.dataset.level = String(day.level);
         cell.dataset.count = String(day.count);
         cell.dataset.date = day.label;
@@ -70,9 +81,13 @@ const ariaLabel =
       }
     } else {
       const fragment = document.createDocumentFragment();
+      let matchedRoving: HTMLElement | null = null;
       for (const day of days) {
         const cell = document.createElement("span");
         cell.className = "github-cell";
+        cell.setAttribute("role", "button");
+        cell.tabIndex = -1;
+        cell.setAttribute("aria-label", formatDayAriaLabel(day.count, day.label));
         cell.dataset.level = String(day.level);
         cell.dataset.count = String(day.count);
         cell.dataset.date = day.label;
@@ -83,20 +98,26 @@ const ariaLabel =
         cell.style.setProperty("--col", String(day.col));
         cell.style.setProperty("--row", String(day.row));
         cell.style.setProperty("--jitter", String((day.col * 7 + day.row * 13) % 5));
+        if (rovingKey && `${day.col},${day.row}` === rovingKey) {
+          matchedRoving = cell;
+        }
         fragment.append(cell);
       }
       grid.replaceChildren(fragment);
+      const nextRoving = matchedRoving ?? (grid.lastElementChild as HTMLElement | null);
+      if (nextRoving) {
+        nextRoving.tabIndex = 0;
+        if (focused) nextRoving.focus({ preventScroll: true });
+      }
     }
 
     const formatted = total.toLocaleString("en-US");
-    if (region) {
-      region.setAttribute(
-        "aria-label",
-        total > 0
-          ? `GitHub contribution heatmap: ${formatted} contributions in the last year.`
-          : "GitHub contribution heatmap."
-      );
-    }
+    grid.setAttribute(
+      "aria-label",
+      total > 0
+        ? `GitHub contribution heatmap: ${formatted} contributions in the last year. Use arrow keys to inspect days.`
+        : "GitHub contribution heatmap. Use arrow keys to inspect days."
+    );
 
     const totalEl = document.querySelector<HTMLElement>("[data-github-total]");
     if (totalEl && total > 0) {
@@ -107,7 +128,6 @@ const ariaLabel =
   async function refreshContributions(
     username: string,
     grid: HTMLElement,
-    region: HTMLElement | null,
     signal: AbortSignal,
     onUpdated: () => void
   ) {
@@ -117,7 +137,7 @@ const ariaLabel =
       if (cached) {
         const parsed = JSON.parse(cached) as { at: number; total: number; days: ContributionDay[] };
         if (Date.now() - parsed.at < CACHE_TTL_MS && Array.isArray(parsed.days) && parsed.days.length) {
-          applyLiveContributions(grid, region, parsed.total, parsed.days);
+          applyLiveContributions(grid, parsed.total, parsed.days);
           onUpdated();
           return;
         }
@@ -138,7 +158,7 @@ const ariaLabel =
       const normalized = normalizeApiContributions(json.contributions, json.total?.lastYear);
       if (!normalized) return;
 
-      applyLiveContributions(grid, region, normalized.total, normalized.days);
+      applyLiveContributions(grid, normalized.total, normalized.days);
       onUpdated();
       try {
         sessionStorage.setItem(
@@ -154,7 +174,6 @@ const ariaLabel =
     cleanup = null;
 
     const wrap = document.querySelector<HTMLElement>("[data-github-activity]");
-    const region = wrap?.querySelector<HTMLElement>("[data-github-region]") ?? null;
     const grid = wrap?.querySelector<HTMLElement>("[data-github-grid]");
     const tooltip = wrap?.querySelector<HTMLElement>("[data-github-tooltip]");
     const dotEl = tooltip?.querySelector<HTMLElement>("[data-tooltip-dot]");
@@ -168,7 +187,7 @@ const ariaLabel =
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     const speed = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--speed")) || 1;
 
-    // Spatial index keyed by "col,row" so proximity hover only touches nearby cells.
+    // Spatial index keyed by "col,row" so proximity hover and arrow navigation stay O(1).
     let cellMap = new Map<string, HTMLElement>();
     let allCells: HTMLElement[] = [];
 
@@ -178,12 +197,29 @@ const ariaLabel =
       for (const cell of allCells) {
         cellMap.set(`${cell.dataset.col},${cell.dataset.row}`, cell);
       }
+      if (activeCell) {
+        if (grid!.contains(activeCell)) updateTooltipContent(activeCell);
+        else clearActive();
+      }
     }
+
+    let activeCell: HTMLElement | null = null;
+    let proxCells = new Set<HTMLElement>();
+    let touchHideTimer = 0;
+
+    function updateTooltipContent(cell: HTMLElement) {
+      const count = Number(cell.dataset.count ?? 0);
+      const date = cell.dataset.date ?? "";
+      dotEl!.dataset.level = cell.dataset.level ?? "0";
+      countEl!.textContent = formatContributionCount(count);
+      dateEl!.textContent = date;
+    }
+
     indexCells();
 
     const username = wrap.dataset.githubUsername;
     if (username) {
-      refreshContributions(username, grid, region, signal, indexCells);
+      refreshContributions(username, grid, signal, indexCells);
     }
 
     let observer: IntersectionObserver | null = null;
@@ -217,10 +253,6 @@ const ariaLabel =
     } else {
       wrap.dataset.reveal = "done";
     }
-
-    let activeCell: HTMLElement | null = null;
-    let proxCells = new Set<HTMLElement>();
-    let touchHideTimer = 0;
 
     function clearProximity() {
       for (const cell of proxCells) {
@@ -273,6 +305,12 @@ const ariaLabel =
       tooltip!.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
     }
 
+    function setRovingFocus(next: HTMLElement) {
+      const prev = grid!.querySelector<HTMLElement>('.github-cell[tabindex="0"]');
+      if (prev && prev !== next) prev.tabIndex = -1;
+      next.tabIndex = 0;
+    }
+
     function activateCell(cell: HTMLElement) {
       const wasOpen = Boolean(activeCell);
       if (activeCell && activeCell !== cell) {
@@ -281,15 +319,7 @@ const ariaLabel =
       activeCell = cell;
       cell.setAttribute("data-active", "");
       updateProximity(cell);
-
-      const count = Number(cell.dataset.count ?? 0);
-      const date = cell.dataset.date ?? "";
-      dotEl!.dataset.level = cell.dataset.level ?? "0";
-      countEl!.textContent =
-        count === 0
-          ? "No contributions"
-          : `${count.toLocaleString("en-US")} ${count === 1 ? "contribution" : "contributions"}`;
-      dateEl!.textContent = date;
+      updateTooltipContent(cell);
       tooltip!.hidden = false;
       positionTooltip(cell, wasOpen);
       tooltip!.dataset.open = "";
@@ -363,6 +393,7 @@ const ariaLabel =
       (event) => {
         const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
         if (!cell) return;
+        setRovingFocus(cell);
         triggerRipple(cell);
         if (event.pointerType === "touch") {
           activateCell(cell);
@@ -373,7 +404,78 @@ const ariaLabel =
       { signal }
     );
 
-    grid.addEventListener("pointerleave", clearActive, { signal });
+    grid.addEventListener(
+      "pointerleave",
+      (event) => {
+        if (event.pointerType !== "touch") clearActive();
+      },
+      { signal }
+    );
+
+    document.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (event.pointerType === "touch" && !grid.contains(event.target as Node)) {
+          clearActive();
+        }
+      },
+      { signal }
+    );
+
+    grid.addEventListener(
+      "focusin",
+      (event) => {
+        const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
+        if (!cell) return;
+        setRovingFocus(cell);
+        activateCell(cell);
+      },
+      { signal }
+    );
+
+    grid.addEventListener(
+      "focusout",
+      (event) => {
+        if (!grid.contains(event.relatedTarget as Node | null)) {
+          clearActive();
+        }
+      },
+      { signal }
+    );
+
+    grid.addEventListener(
+      "keydown",
+      (event) => {
+        const cell = (event.target as Element | null)?.closest<HTMLElement>(".github-cell");
+        if (!cell) return;
+
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          triggerRipple(cell);
+          return;
+        }
+
+        const c = Number(cell.dataset.col);
+        const r = Number(cell.dataset.row);
+        let target: HTMLElement | undefined;
+
+        if (event.key === "ArrowLeft") target = cellMap.get(`${c - 1},${r}`);
+        else if (event.key === "ArrowRight") target = cellMap.get(`${c + 1},${r}`) ?? allCells.at(-1);
+        else if (event.key === "ArrowUp") target = cellMap.get(`${c},${r - 1}`) ?? cellMap.get(`${c - 1},6`);
+        else if (event.key === "ArrowDown") target = cellMap.get(`${c},${r + 1}`) ?? cellMap.get(`${c + 1},0`);
+        else if (event.key === "Home") target = allCells[0];
+        else if (event.key === "End") target = allCells.at(-1);
+        else return;
+
+        event.preventDefault();
+        if (target && target !== cell) {
+          setRovingFocus(target);
+          target.focus({ preventScroll: true });
+        }
+      },
+      { signal }
+    );
+
     window.addEventListener("scroll", clearActive, { passive: true, signal });
     window.addEventListener("resize", clearActive, { passive: true, signal });
 
