@@ -1,11 +1,17 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import GithubActivity from "../components/GithubActivity.astro";
 import ImageStack from "../components/ImageStack.astro";
 import Signature from "../components/Signature.astro";
 import ResumePrinter from "../components/ResumePrinter.astro";
 import { getPortfolioContent } from "../lib/content";
+import { getGithubContributions } from "../lib/github";
 
-const { work, writing } = await getPortfolioContent({ includeBody: false });
+const [{ work, writing }, contributions] = await Promise.all([
+  getPortfolioContent({ includeBody: false }),
+  getGithubContributions()
+]);
+const formattedContributions = contributions.total.toLocaleString("en-US");
 const hasWriting = writing.length > 0;
 const visibleCount = 3;
 const discordUserId = "192485745087348736";
@@ -221,12 +227,21 @@ const experience = [
     </section>
 
     <footer class="site-footer" data-collapsible>
-      <p style={`--stagger: ${6 + visibleCount}`}>
-        Older portfolios:
-        {oldPortfolios.map(([label, href]) => (
-          <a href={href} target="_blank" rel="noreferrer">{label}<span class="footer-arrow" aria-hidden="true">↗</span></a>
-        ))}
-      </p>
+      <div class="entry-divider" aria-hidden="true"></div>
+      <div class="site-footer-meta" style={`--stagger: ${6 + visibleCount}`}>
+        <p>
+          Older portfolios:
+          {oldPortfolios.map(([label, href]) => (
+            <a href={href} target="_blank" rel="noreferrer">{label}<span class="footer-arrow" aria-hidden="true">↗</span></a>
+          ))}
+        </p>
+        <p class="site-footer-github">
+          <a href={contributions.profileUrl} target="_blank" rel="noreferrer">
+            <span data-github-total>{contributions.total > 0 ? `${formattedContributions} on GitHub` : "GitHub"}</span><span class="footer-arrow" aria-hidden="true">↗</span>
+          </a>
+        </p>
+      </div>
+      <GithubActivity contributions={contributions} />
     </footer>
     <ResumePrinter />
   </main>
